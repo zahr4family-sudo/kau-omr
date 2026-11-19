@@ -1,25 +1,37 @@
 {
-  "name": "KAU - Koreksi & Analisis Ulangan",
-  "short_name": "KAU OMR",
-  "description": "Aplikasi Koreksi LJK OMR & Analisis Butir Soal Multi-Kelas",
+  "id": "./",
+  "name": "KAU OMR",
+  "short_name": "KAU",
+  "description": "Aplikasi koreksi LJK, input nilai, analisis soal, dan rekap siswa.",
+  "lang": "id-ID",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f1f5f9",
   "theme_color": "#1d4ed8",
+  "categories": [
+    "education",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "./icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "./icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
