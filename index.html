@@ -418,6 +418,7 @@
         height: auto !important;
         margin: 0 auto !important;
         display: block !important;
+        image-rendering: -webkit-optimize-contrast;
       }
       #printArea .print-page.ljk-sheet.f4-sheet img {
         max-height: 316mm !important;
@@ -655,9 +656,9 @@
     <!-- ==================== TAB 2: BUAT & CETAK LJK ==================== -->
     <section id="tab-ljk" class="tab-page">
       <div class="card">
-        <h2>Pembuat Lembar Jawaban Komputer (LJK) Siap Cetak</h2>
+        <h2>Pembuat Lembar Jawaban Komputer (LJK) Siap Cetak (HD 240 DPI)</h2>
         <p style="font-size:0.82rem; color:var(--muted); margin-top:0;">
-          Mendukung <b>Mode Hemat Kertas F4 (2 LJK dalam 1 Halaman F4 untuk digunting/dibagi dua)</b> saat soal sedikit atau tanpa soal uraian, maupun <b>Mode Standar A4</b>.
+          Mendukung <b>Mode Hemat Kertas F4 (2 LJK dalam 1 Halaman F4 untuk digunting/dibagi dua)</b> saat soal sedikit atau tanpa soal uraian, maupun <b>Mode Standar A4</b> dengan kualitas cetak tajam beresolusi tinggi.
         </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin:12px 0;padding:12px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;">
           <div>
@@ -712,11 +713,11 @@
           <button class="btn btn-primary" onclick="renderLJKPreview()">🔄 Perbarui Preview LJK</button>
           <button class="btn btn-success" onclick="printLJK()">🖨️ Cetak / Simpan PDF LJK</button>
           <button class="btn btn-warning" onclick="printAllStudentsLJK()">🖨️ Cetak Massal LJK Semua Siswa</button>
-          <button class="btn btn-outline" onclick="downloadLJKImage()">🖼️ Unduh Gambar LJK (.png)</button>
+          <button class="btn btn-outline" onclick="downloadLJKImage()">🖼️ Unduh Gambar LJK HD (.png)</button>
         </div>
         <div class="ljk-preview-stack" id="ljkPreviewStack">
-          <canvas id="ljkGeneratorCanvas" width="794" height="1123"></canvas>
-          <canvas id="ljkUraianCanvas2" width="794" height="1123" style="display:none;"></canvas>
+          <canvas id="ljkGeneratorCanvas" width="1985" height="2808"></canvas>
+          <canvas id="ljkUraianCanvas2" width="1985" height="2808" style="display:none;"></canvas>
         </div>
       </div>
     </section>
@@ -733,7 +734,7 @@
         </div>
 
         <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:7px 10px; font-size:0.78rem; margin-bottom:10px; color:#334155;">
-          <b>Tips Scan Cepat & Akurat:</b> Cukup arahkan kamera ke <b>4 kotak hitam di sudut area LJK</b> (mendukung baik LJK A4 maupun potongan LJK F4 2-in-1).
+          <b>Tips Scan Cepat & Akurat:</b> Posisikan <b>4 kotak hitam di sudut satu lembar LJK</b> di tengah layar kamera (aman meskipun potongan LJK kedua ikut terlihat di pinggir foto).
           Kosong = <b><code>V</code></b> | Ganda/Semua Opsi = <b><code>X</code></b>.
         </div>
 
@@ -906,6 +907,7 @@ function getRTable(n) {
 }
 
 const MAX_STUDENTS = 500;
+const LJK_PRINT_SCALE = 2.5; // Resolusi HD 240 DPI untuk hasil cetak & gambar LJK super tajam
 const DEFAULT_MASTER_CLASSES = [
   'I (Satu)/ Ganjil',
   'II (Dua)/ Ganjil',
@@ -2132,7 +2134,7 @@ function computeAllAnalytics() {
   return computeAllAnalyticsForSession(state);
 }
 
-// ==================== PEMBUAT LJK (MENDUKUNG MODE HEMAT KERTAS F4 2-IN-1 & STANDAR A4) ====================
+// ==================== PEMBUAT LJK HD (MENDUKUNG MODE HEMAT KERTAS F4 2-IN-1 & STANDAR A4) ====================
 function getBSQuestionNo(index) {
   const pgCount = Math.max(0, Number(state.config.jmlPG) || 0);
   return pgCount + Number(index || 0) + 1;
@@ -2185,8 +2187,8 @@ function getOMRLayout(compactMode = false) {
 
   const W = 794;
   const H = compactMode ? 602 : 1123;
-  const margin = compactMode ? 14 : 24;
-  const mkSize = compactMode ? 21 : 24;
+  const margin = compactMode ? 13 : 24;
+  const mkSize = compactMode ? 23 : 25;
   const fx = margin + mkSize / 2;
   const fy = margin + mkSize / 2;
   const fw = W - 2 * fx;
@@ -2374,8 +2376,14 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   const ctx = canvas.getContext('2d');
   const layout = getOMRLayout(compactMode);
   const W = layout.W, H = layout.H;
-  canvas.width = W;
-  canvas.height = H;
+  const scale = LJK_PRINT_SCALE;
+  canvas.width = Math.round(W * scale);
+  canvas.height = Math.round(H * scale);
+
+  ctx.save();
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
@@ -2390,8 +2398,8 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   ctx.fillStyle = '#000000';
   anchors.forEach(([ax, ay]) => ctx.fillRect(ax, ay, mkSize, mkSize));
 
-  ctx.strokeStyle = '#0f172a';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 1.65;
   ctx.strokeRect(layout.boxLeft, layout.boxTop, layout.boxW, layout.boxBottom - layout.boxTop);
 
   const isSquare = layout.bubbleShape === 'square';
@@ -2400,11 +2408,11 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   const absY = layout.absY;
   const titleBoxH = compactMode ? 68 : 82;
 
-  ctx.strokeStyle = '#334155';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 1.15;
   ctx.strokeRect(leftBoxX, absY, leftBoxW, titleBoxH);
 
-  ctx.fillStyle = '#0f172a';
+  ctx.fillStyle = '#000000';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.font = compactMode ? 'bold 12px sans-serif' : 'bold 13.5px sans-serif';
@@ -2412,7 +2420,7 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   ctx.font = compactMode ? 'bold 9.5px sans-serif' : 'bold 10.5px sans-serif';
   ctx.fillText(state.meta.sekolah.toUpperCase(), leftBoxX + 9, absY + (compactMode ? 28 : 34));
   ctx.font = compactMode ? '8.5px sans-serif' : '9.2px sans-serif';
-  ctx.fillStyle = '#334155';
+  ctx.fillStyle = '#1e293b';
   ctx.fillText(`${state.meta.jenisTes} • Mapel: ${state.meta.mapel}`, leftBoxX + 9, absY + (compactMode ? 41 : 49));
   ctx.fillText(`Kelas: ${state.meta.kelas} • Tahun: ${state.meta.tapel} • Tgl: ${state.meta.tglTes}`, leftBoxX + 9, absY + (compactMode ? 53 : 63));
   if (!compactMode) {
@@ -2422,9 +2430,10 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   }
 
   const idBoxY = absY + titleBoxH + (compactMode ? 4 : 5);
-  ctx.strokeStyle = '#334155';
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 1.15;
   ctx.strokeRect(leftBoxX, idBoxY, leftBoxW, layout.absH - (titleBoxH + (compactMode ? 4 : 5)));
-  ctx.fillStyle = '#0f172a';
+  ctx.fillStyle = '#000000';
   ctx.font = compactMode ? 'bold 9px sans-serif' : 'bold 9.8px sans-serif';
 
   if (studentObj) {
@@ -2438,18 +2447,19 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   }
 
   const sepY = idBoxY + (compactMode ? 42 : 56);
-  ctx.strokeStyle = '#cbd5e1';
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 0.9;
   ctx.beginPath();
   ctx.moveTo(leftBoxX + 8, sepY);
   ctx.lineTo(leftBoxX + leftBoxW - 8, sepY);
   ctx.stroke();
 
   const idTitle = getIdFieldLabel();
-  ctx.fillStyle = '#1e293b';
+  ctx.fillStyle = '#0f172a';
   ctx.font = compactMode ? 'bold 8.2px sans-serif' : 'bold 9px sans-serif';
   ctx.fillText('PETUNJUK PENGISIAN:', leftBoxX + 9, sepY + (compactMode ? 12 : 15));
   ctx.font = compactMode ? '8px sans-serif' : '8.5px sans-serif';
-  ctx.fillStyle = '#334155';
+  ctx.fillStyle = '#1e293b';
   const rowGapGuide = compactMode ? 11.5 : 13.5;
 
   if (isSquare) {
@@ -2459,18 +2469,18 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
     const exY = sepY + (compactMode ? 24 : 29) + rowGapGuide * 2 + 1;
     ctx.fillText('Contoh Benar:', leftBoxX + 9, exY);
     const bx1 = leftBoxX + 76, by1 = exY - 3;
-    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1.1;
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = 1.2;
     ctx.strokeRect(bx1 - 4.5, by1 - 4.5, 9, 9);
     ctx.beginPath(); ctx.moveTo(bx1 - 3.8, by1 - 3.8); ctx.lineTo(bx1 + 3.8, by1 + 3.8);
     ctx.moveTo(bx1 + 3.8, by1 - 3.8); ctx.lineTo(bx1 - 3.8, by1 + 3.8); ctx.stroke();
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#000000';
     ctx.fillRect(leftBoxX + 91 - 4.5, by1 - 4.5, 9, 9);
 
-    ctx.fillStyle = '#334155';
+    ctx.fillStyle = '#1e293b';
     ctx.fillText('Contoh Salah:', leftBoxX + 110, exY);
     [176, 193].forEach((dx, idx) => {
       const cx = leftBoxX + dx, cy = by1;
-      ctx.strokeStyle = '#0f172a'; ctx.strokeRect(cx - 4.5, cy - 4.5, 9, 9);
+      ctx.strokeStyle = '#000000'; ctx.strokeRect(cx - 4.5, cy - 4.5, 9, 9);
       ctx.beginPath();
       if (idx === 0) { ctx.moveTo(cx - 2, cy); ctx.lineTo(cx + 2, cy); }
       else { ctx.arc(cx, cy, 1.5, 0, Math.PI * 2); ctx.fill(); }
@@ -2482,12 +2492,12 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
 
     const exY = sepY + (compactMode ? 24 : 29) + rowGapGuide * 2 + 1;
     ctx.fillText('Contoh Benar:', leftBoxX + 9, exY);
-    ctx.beginPath(); ctx.arc(leftBoxX + 78, exY - 3, 4.6, 0, Math.PI * 2); ctx.fillStyle = '#0f172a'; ctx.fill();
-    ctx.fillStyle = '#334155';
+    ctx.beginPath(); ctx.arc(leftBoxX + 78, exY - 3, 4.6, 0, Math.PI * 2); ctx.fillStyle = '#000000'; ctx.fill();
+    ctx.fillStyle = '#1e293b';
     ctx.fillText('Contoh Salah:', leftBoxX + 108, exY);
     [174, 191, 208].forEach((dx, idx) => {
       const cx = leftBoxX + dx, cy = exY - 3;
-      ctx.beginPath(); ctx.arc(cx, cy, 4.6, 0, Math.PI * 2); ctx.strokeStyle = '#0f172a'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, 4.6, 0, Math.PI * 2); ctx.strokeStyle = '#000000'; ctx.stroke();
       ctx.beginPath();
       if (idx === 0) { ctx.moveTo(cx - 3.5, cy - 3.5); ctx.lineTo(cx + 3.5, cy + 3.5); ctx.moveTo(cx + 3.5, cy - 3.5); ctx.lineTo(cx - 3.5, cy + 3.5); }
       else if (idx === 1) { ctx.moveTo(cx - 2.5, cy); ctx.lineTo(cx, cy + 2.5); ctx.lineTo(cx + 4, cy - 3.5); }
@@ -2499,12 +2509,12 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   // Kotak Gelembung Nomor Peserta / NISN
   const absX = layout.idGridBoxX;
   const absW = layout.idGridBoxW;
-  ctx.strokeStyle = '#0f172a';
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 1.25;
   ctx.strokeRect(absX, absY, absW, layout.absH);
   ctx.fillStyle = '#e2e8f0';
   ctx.fillRect(absX, absY, absW, compactMode ? 15 : 18);
-  ctx.fillStyle = '#0f172a';
+  ctx.fillStyle = '#000000';
   ctx.font = compactMode ? 'bold 8px sans-serif' : 'bold 8.8px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(idTitle, absX + absW / 2, absY + (compactMode ? 11 : 12.5));
@@ -2518,11 +2528,11 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   const digitBoxH = compactMode ? 12 : 14;
   for (let d = 0; d < layout.idDigits; d++) {
     const cx = layout.firstColX + d * layout.colStepPx;
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 0.9;
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.0;
     ctx.strokeRect(cx - digitBoxW / 2, digitBoxY, digitBoxW, digitBoxH);
     if (prefillCode && prefillCode[d] !== undefined) {
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = '#000000';
       ctx.font = compactMode ? 'bold 8.5px monospace' : 'bold 9.5px monospace';
       ctx.textBaseline = 'middle';
       ctx.fillText(prefillCode[d], cx, digitBoxY + digitBoxH / 2 + 0.5);
@@ -2532,7 +2542,7 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   ctx.beginPath();
   ctx.moveTo(absX, digitBoxY + digitBoxH + 2);
   ctx.lineTo(absX + absW, digitBoxY + digitBoxH + 2);
-  ctx.strokeStyle = '#94a3b8';
+  ctx.strokeStyle = '#64748b';
   ctx.stroke();
 
   layout.bubbles.forEach(b => {
@@ -2543,15 +2553,15 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
 
     drawBubbleShapePath(ctx, cx, cy, rBubble, layout.bubbleShape);
     if (isPrefilledId) {
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = '#000000';
       ctx.fill();
     } else {
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.25;
       ctx.stroke();
 
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = `600 ${rBubble < 6.8 ? 6.6 : 7.8}px sans-serif`;
+      ctx.fillStyle = '#64748b';
+      ctx.font = `700 ${rBubble < 6.8 ? 6.8 : 8.0}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(b.type === 'id_code' ? String(b.val) : b.letter, cx, cy + 0.3);
@@ -2564,12 +2574,12 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
   const secPGY = layout.pgSecHeaderY;
   ctx.fillStyle = '#e2e8f0';
   ctx.fillRect(leftBoxX, secPGY - (compactMode ? 10 : 12), layout.contentW, compactMode ? 14 : 17);
-  ctx.fillStyle = '#0f172a';
+  ctx.fillStyle = '#000000';
   ctx.font = compactMode ? 'bold 9px sans-serif' : 'bold 10px sans-serif';
   ctx.fillText(`I. PILIHAN GANDA (${state.config.jmlPG} SOAL)`, leftBoxX + 6, secPGY);
 
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 1.0;
   for (let c = 1; c < layout.pgCols; c++) {
     const divX = leftBoxX + c * layout.pgColWidth_px - 4;
     ctx.beginPath();
@@ -2578,8 +2588,8 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
     ctx.stroke();
   }
 
-  ctx.fillStyle = '#0f172a';
-  ctx.font = compactMode ? 'bold 8px sans-serif' : 'bold 8.5px sans-serif';
+  ctx.fillStyle = '#000000';
+  ctx.font = compactMode ? 'bold 8.2px sans-serif' : 'bold 8.8px sans-serif';
   for (let q = 0; q < state.config.jmlPG; q++) {
     const colIdx = Math.floor(q / layout.pgRows);
     const rowIdx = q % layout.pgRows;
@@ -2593,11 +2603,12 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
     const secBSY = layout.bsSecHeaderY;
     ctx.fillStyle = '#e2e8f0';
     ctx.fillRect(leftBoxX, secBSY - (compactMode ? 10 : 12), layout.contentW, compactMode ? 14 : 17);
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#000000';
     ctx.font = compactMode ? 'bold 9px sans-serif' : 'bold 10px sans-serif';
     ctx.fillText(`II. BENAR - SALAH (${state.config.jmlBS} SOAL • B = Benar, S = Salah)`, leftBoxX + 6, secBSY);
 
-    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1.0;
     for (let c = 1; c < layout.bsCols; c++) {
       const divX = leftBoxX + c * layout.bsColWidth_px - 4;
       ctx.beginPath();
@@ -2606,8 +2617,8 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
       ctx.stroke();
     }
 
-    ctx.fillStyle = '#0f172a';
-    ctx.font = compactMode ? 'bold 8px sans-serif' : 'bold 8.5px sans-serif';
+    ctx.fillStyle = '#000000';
+    ctx.font = compactMode ? 'bold 8.2px sans-serif' : 'bold 8.8px sans-serif';
     for (let q = 0; q < state.config.jmlBS; q++) {
       const colIdx = Math.floor(q / layout.bsRows);
       const rowIdx = q % layout.bsRows;
@@ -2623,7 +2634,7 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
     const secURY = layout.uraianTopY_px + 11;
     ctx.fillStyle = '#e2e8f0';
     ctx.fillRect(layout.boxLeft, secURY - 10, layout.boxW, 15);
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#000000';
     ctx.font = compactMode ? 'bold 9px sans-serif' : 'bold 10px sans-serif';
     const labelUraian = layout.urOnPage2 > 0
       ? `${romawiUraian}. JAWABAN URAIAN (Bagian 1: ${layout.urOnPage1} dari ${state.config.jmlUR} Soal)`
@@ -2640,16 +2651,16 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
       const y0 = boxTop + u * itemH;
       const y1 = y0 + itemH - 3;
 
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 0.9;
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.0;
       ctx.strokeRect(layout.boxLeft, y0, layout.boxW, itemH - 3);
 
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = '#000000';
       ctx.font = 'bold 9px sans-serif';
       ctx.fillText(`${noSoal}.`, layout.boxLeft + 6, y0 + 12);
 
       ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 0.7;
+      ctx.lineWidth = 0.8;
       const lineSpacing = 14;
       for (let ly = y0 + 15; ly < y1 - 2; ly += lineSpacing) {
         ctx.beginPath();
@@ -2662,31 +2673,39 @@ function drawLJKOnCanvas(canvas, studentObj = null, compactMode = false) {
     const secURY = layout.uraianTopY_px + 12;
     ctx.fillStyle = '#f1f5f9';
     ctx.fillRect(layout.boxLeft, secURY - 10, layout.boxW, 22);
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#000000';
     ctx.font = 'bold 9.5px sans-serif';
     ctx.fillText(`${romawiUraian}. LEMBAR JAWABAN URAIAN (${state.config.jmlUR} SOAL) TERSEDIA PADA HALAMAN 2`, layout.boxLeft + 8, secURY + 4);
   }
+
+  ctx.restore();
   return layout;
 }
 
 function drawLJKF4TwoUpOnCanvas(canvas, studentTop = null, studentBottom = null) {
   const F4_W = 794;
   const F4_H = 1218;
-  canvas.width = F4_W;
-  canvas.height = F4_H;
+  const scale = LJK_PRINT_SCALE;
+  canvas.width = Math.round(F4_W * scale);
+  canvas.height = Math.round(F4_H * scale);
 
   const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, F4_W, F4_H);
 
   const halfCanvas = document.createElement('canvas');
   const layoutTop = drawLJKOnCanvas(halfCanvas, studentTop, true);
-  ctx.drawImage(halfCanvas, 0, 0);
+  ctx.drawImage(halfCanvas, 0, 0, F4_W, layoutTop.H);
 
   const cutY = Math.round(F4_H / 2);
   ctx.save();
-  ctx.strokeStyle = '#475569';
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = '#64748b';
+  ctx.lineWidth = 1.1;
   ctx.setLineDash([8, 6]);
   ctx.beginPath();
   ctx.moveTo(12, cutY);
@@ -2704,8 +2723,9 @@ function drawLJKF4TwoUpOnCanvas(canvas, studentTop = null, studentBottom = null)
   ctx.restore();
 
   drawLJKOnCanvas(halfCanvas, studentBottom, true);
-  ctx.drawImage(halfCanvas, 0, cutY + 7);
+  ctx.drawImage(halfCanvas, 0, cutY + 7, F4_W, layoutTop.H);
 
+  ctx.restore();
   return { ...layoutTop, isF4TwoUp: true };
 }
 
@@ -2732,7 +2752,7 @@ function renderLJKPreview() {
         : '2 LJK Template Siap Gunting (Atas & Bawah)';
       infoEl.style.background = '#dcfce7';
       infoEl.style.color = '#166534';
-      infoEl.innerHTML = `✂️ <b>Mode Hemat Kertas F4 Aktif (2 LJK dalam 1 Halaman F4):</b> ${idSummary} • ${pairInfo}. Cukup cetak pada kertas <b>F4 (215 × 330 mm)</b> lalu gunting di garis tengah!`;
+      infoEl.innerHTML = `✂️ <b>Mode Hemat Kertas F4 HD (2 LJK dalam 1 Halaman F4 • 240 DPI):</b> ${idSummary} • ${pairInfo}. Cukup cetak pada kertas <b>F4 (215 × 330 mm)</b> lalu gunting di garis tengah!`;
     }
     return;
   }
@@ -2750,27 +2770,36 @@ function renderLJKPreview() {
     if (layout.urOnPage2 === 0) {
       infoEl.style.background = '#eff6ff';
       infoEl.style.color = '#1e3a8a';
-      infoEl.innerHTML = `📄 <b>Mode Standar A4 (1 LJK per Halaman):</b> ${idSummary} • Total <b>${totalSoal} nomor</b> (${state.config.jmlPG} PG${state.config.jmlBS ? ' + ' + state.config.jmlBS + ' B-S' : ''}${state.config.jmlUR ? ' + ' + state.config.jmlUR + ' Uraian' : ''}) termuat dalam <b>1 lembar halaman</b>.`;
+      infoEl.innerHTML = `📄 <b>Mode Standar A4 HD (1 LJK per Halaman • 240 DPI):</b> ${idSummary} • Total <b>${totalSoal} nomor</b> (${state.config.jmlPG} PG${state.config.jmlBS ? ' + ' + state.config.jmlBS + ' B-S' : ''}${state.config.jmlUR ? ' + ' + state.config.jmlUR + ' Uraian' : ''}) termuat dalam <b>1 lembar halaman</b>.`;
     } else {
       infoEl.style.background = '#eff6ff';
       infoEl.style.color = '#1e3a8a';
-      infoEl.innerHTML = `📄 <b>2 Halaman A4:</b> ${idSummary} • Halaman 1 memuat seluruh PG${state.config.jmlBS ? ', B-S' : ''}${layout.urOnPage1 > 0 ? ` + ${layout.urOnPage1} soal Uraian pertama` : ''}; Halaman 2 memuat ${layout.urOnPage2} soal Uraian sisanya.`;
+      infoEl.innerHTML = `📄 <b>2 Halaman A4 HD (240 DPI):</b> ${idSummary} • Halaman 1 memuat seluruh PG${state.config.jmlBS ? ', B-S' : ''}${layout.urOnPage1 > 0 ? ` + ${layout.urOnPage1} soal Uraian pertama` : ''}; Halaman 2 memuat ${layout.urOnPage2} soal Uraian sisanya.`;
     }
   }
 }
 
 function renderUraianContinuationCanvas(canvas, startIdx, totalUR, studentObj = null) {
   const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
+  const W = 794, H = 1123;
+  const scale = LJK_PRINT_SCALE;
+  canvas.width = Math.round(W * scale);
+  canvas.height = Math.round(H * scale);
+
+  ctx.save();
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
   const pad = 38;
-  ctx.strokeStyle = '#0f172a';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 1.6;
   ctx.strokeRect(pad, pad, W - 2 * pad, H - 2 * pad);
 
-  ctx.fillStyle = '#0f172a';
+  ctx.fillStyle = '#000000';
   ctx.font = 'bold 15px sans-serif';
   ctx.fillText('LEMBAR JAWABAN URAIAN (LANJUTAN)', pad + 14, pad + 26);
   ctx.font = '10.5px sans-serif';
@@ -2797,16 +2826,16 @@ function renderUraianContinuationCanvas(canvas, startIdx, totalUR, studentObj = 
     const y0 = topY + i * boxH;
     const y1 = y0 + boxH - 8;
 
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 1.05;
     ctx.strokeRect(pad + 14, y0, W - 2 * pad - 28, boxH - 8);
 
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#000000';
     ctx.font = 'bold 10.5px sans-serif';
     ctx.fillText(`Soal Uraian No. ${noSoal}`, pad + 22, y0 + 16);
 
     ctx.strokeStyle = '#cbd5e1';
-    ctx.lineWidth = 0.8;
+    ctx.lineWidth = 0.85;
     for (let ly = y0 + 34; ly < y1 - 6; ly += 20) {
       ctx.beginPath();
       ctx.moveTo(pad + 22, ly);
@@ -2814,6 +2843,7 @@ function renderUraianContinuationCanvas(canvas, startIdx, totalUR, studentObj = 
       ctx.stroke();
     }
   }
+  ctx.restore();
 }
 
 // ==================== MESIN CETAK ANTI HALAMAN KOSONG (PRINTER & PDF) ====================
@@ -2891,9 +2921,7 @@ async function printAllStudentsLJK() {
     await triggerPrintPages(pagesHtml.join(''), '215mm 330mm');
   } else {
     const off1 = document.createElement('canvas');
-    off1.width = 794; off1.height = 1123;
     const off2 = document.createElement('canvas');
-    off2.width = 794; off2.height = 1123;
 
     state.students.forEach(st => {
       const layout = drawLJKOnCanvas(off1, st, false);
@@ -2910,7 +2938,7 @@ async function printAllStudentsLJK() {
 function downloadLJKImage() {
   renderLJKPreview();
   const useF4 = shouldUseF4TwoUp();
-  const suffix = useF4 ? '_F4_2LJK' : '_A4';
+  const suffix = useF4 ? '_F4_2LJK_HD' : '_A4_HD';
   const link = document.createElement('a');
   link.download = `LJK_KAU_${state.meta.kelas.replace(/\W+/g, '_')}_${state.meta.mapel}_${state.config.jmlPG}PG${suffix}.png`;
   link.href = document.getElementById('ljkGeneratorCanvas').toDataURL('image/png');
@@ -2920,7 +2948,7 @@ function downloadLJKImage() {
   if (!useF4 && canvas2 && canvas2.style.display !== 'none') {
     setTimeout(() => {
       const link2 = document.createElement('a');
-      link2.download = `LJK_KAU_${state.meta.kelas.replace(/\W+/g, '_')}_${state.meta.mapel}_Uraian_Hal2.png`;
+      link2.download = `LJK_KAU_${state.meta.kelas.replace(/\W+/g, '_')}_${state.meta.mapel}_Uraian_Hal2_HD.png`;
       link2.href = canvas2.toDataURL('image/png');
       link2.click();
     }, 350);
@@ -2969,7 +2997,7 @@ function drawScannerIdleCanvas() {
   ctx.fillText(`${state.meta.kelas} • ${state.meta.mapel} (${state.config.bubbleShape === 'square' ? 'Kotak / Silang ✕' : 'Lingkaran'})`, canvas.width / 2, canvas.height / 2 + 4);
   ctx.font = '13px sans-serif';
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText('Cukup posisikan 4 sudut kotak LJK ke dalam kamera', canvas.width / 2, canvas.height / 2 + 30);
+  ctx.fillText('Posisikan 4 sudut kotak 1 LJK di tengah kamera', canvas.width / 2, canvas.height / 2 + 30);
   ctx.textAlign = 'left';
 }
 
@@ -3120,7 +3148,7 @@ function startLiveScannerLoop() {
     const activeLayout = getOMRLayout(shouldUseF4TwoUp());
     const expectedAspect = activeLayout.fw / activeLayout.fh;
 
-    const scale = 380 / Math.max(vw, vh);
+    const scale = 420 / Math.max(vw, vh);
     const pw = Math.round(vw * scale);
     const ph = Math.round(vh * scale);
     probeCanvas.width = pw;
@@ -3222,7 +3250,7 @@ function startLiveScannerLoop() {
       drawBracket(x0 + boxW, y0, -1, 1);
       drawBracket(x0 + boxW, y0 + boxH, -1, -1);
       drawBracket(x0, y0 + boxH, 1, -1);
-      if (statusPill) statusPill.textContent = '🔍 Paskan 4 kotak hitam sudut LJK ke bingkai...';
+      if (statusPill) statusPill.textContent = '🔍 Paskan 4 kotak hitam sudut 1 LJK ke bingkai...';
     }
   };
   liveScanRafId = requestAnimationFrame(tick);
@@ -3618,6 +3646,7 @@ function prepareNextScan(advanceStudent = true) {
   }
 }
 
+// Deteksi 4 Kotak Jangkar Hitam dengan Filter Anti-Lintas 2 LJK & Prioritas Tengah Layar
 function detectFiducialCorners(imgData, w, h, expectedAspect = 1.32) {
   const d = imgData.data;
   const n = w * h;
@@ -3651,20 +3680,21 @@ function detectFiducialCorners(imgData, w, h, expectedAspect = 1.32) {
               + integ[y0 * stride + x0];
     const localMean = sum / area;
     const g = gray[y * w + x];
-    return g < localMean * 0.72 && g < 168;
+    return g < localMean * 0.70 && g < 162;
   };
 
   const visited = new Uint8Array(n);
   const queueX = new Int32Array(25000);
   const queueY = new Int32Array(25000);
 
-  const minSide = Math.max(6, Math.round(w * 0.011));
-  const maxSide = Math.round(w * 0.085);
+  const step = w <= 500 ? 1 : 2;
+  const minSide = Math.max(5, Math.round(w * 0.009));
+  const maxSide = Math.round(w * 0.095);
   const leftCandidates = [];
   const rightCandidates = [];
 
-  for (let y = 2; y < h - 2; y += 2) {
-    for (let x = 2; x < w - 2; x += 2) {
+  for (let y = 2; y < h - 2; y += step) {
+    for (let x = 2; x < w - 2; x += step) {
       if (x > w * 0.36 && x < w * 0.64) continue;
       const idx = y * w + x;
       if (visited[idx] || !isAdaptiveDark(x, y)) continue;
@@ -3705,7 +3735,7 @@ function detectFiducialCorners(imgData, w, h, expectedAspect = 1.32) {
       if (aspect < 0.65 || aspect > 1.54) continue;
 
       const fillRatio = count / (bw * bh);
-      if (fillRatio < 0.68) continue;
+      if (fillRatio < 0.70) continue;
 
       const centX = sumX / count;
       const centY = sumY / count;
@@ -3720,47 +3750,83 @@ function detectFiducialCorners(imgData, w, h, expectedAspect = 1.32) {
 
   let bestQuad = null;
   let bestQuadScore = -Infinity;
+  const frameCx = w * 0.5;
+  const frameCy = h * 0.5;
+  const maxFrameDist = Math.hypot(frameCx, frameCy) || 1;
 
   for (let i = 0; i < leftCandidates.length; i++) {
     const tl = leftCandidates[i];
-    if (tl.y > h * 0.48) continue;
+    if (tl.y > h * 0.58) continue;
     for (let j = 0; j < leftCandidates.length; j++) {
       if (i === j) continue;
       const bl = leftCandidates[j];
       if (bl.y <= tl.y + h * 0.16) continue;
       if (Math.abs(tl.x - bl.x) > w * 0.14) continue;
 
+      // Tolak pasangan tl-bl jika ada kotak jangkar lain di tengah sisi kiri (tanda melompati batas 2 LJK)
+      const leftSpanY = bl.y - tl.y;
+      const midLeftX = (tl.x + bl.x) * 0.5;
+      let hasMidLeftAnchor = false;
+      for (let mIdx = 0; mIdx < leftCandidates.length; mIdx++) {
+        if (mIdx === i || mIdx === j) continue;
+        const mc = leftCandidates[mIdx];
+        if (mc.y > tl.y + leftSpanY * 0.22 && mc.y < bl.y - leftSpanY * 0.22 && Math.abs(mc.x - midLeftX) < w * 0.06) {
+          hasMidLeftAnchor = true;
+          break;
+        }
+      }
+      if (hasMidLeftAnchor) continue;
+
       for (let k = 0; k < rightCandidates.length; k++) {
         const tr = rightCandidates[k];
-        if (tr.y > h * 0.48) continue;
-        if (Math.abs(tl.y - tr.y) > h * 0.12) continue;
+        if (tr.y > h * 0.58) continue;
+        if (Math.abs(tl.y - tr.y) > h * 0.13) continue;
 
         for (let m = 0; m < rightCandidates.length; m++) {
           if (k === m) continue;
           const br = rightCandidates[m];
           if (br.y <= tr.y + h * 0.16) continue;
           if (Math.abs(tr.x - br.x) > w * 0.14) continue;
-          if (Math.abs(bl.y - br.y) > h * 0.12) continue;
+          if (Math.abs(bl.y - br.y) > h * 0.13) continue;
+
+          // Tolak pasangan tr-br jika ada kotak jangkar lain di tengah sisi kanan
+          const rightSpanY = br.y - tr.y;
+          const midRightX = (tr.x + br.x) * 0.5;
+          let hasMidRightAnchor = false;
+          for (let mIdx = 0; mIdx < rightCandidates.length; mIdx++) {
+            if (mIdx === k || mIdx === m) continue;
+            const mc = rightCandidates[mIdx];
+            if (mc.y > tr.y + rightSpanY * 0.22 && mc.y < br.y - rightSpanY * 0.22 && Math.abs(mc.x - midRightX) < w * 0.06) {
+              hasMidRightAnchor = true;
+              break;
+            }
+          }
+          if (hasMidRightAnchor) continue;
 
           const topW = Math.hypot(tr.x - tl.x, tr.y - tl.y);
           const botW = Math.hypot(br.x - bl.x, br.y - bl.y);
           const leftH = Math.hypot(bl.x - tl.x, bl.y - tl.y);
           const rightH = Math.hypot(br.x - tr.x, br.y - tr.y);
 
-          if (topW < w * 0.42 || botW < w * 0.42) continue;
+          if (topW < w * 0.40 || botW < w * 0.40) continue;
           const wRatio = topW / botW;
           const hRatio = leftH / rightH;
           if (wRatio < 0.74 || wRatio > 1.35 || hRatio < 0.74 || hRatio > 1.35) continue;
 
           const measAspect = ((topW + botW) * 0.5) / ((leftH + rightH) * 0.5);
           const aspectDiff = Math.abs(Math.log(measAspect / Math.max(0.4, expectedAspect)));
-          if (aspectDiff > 0.48) continue;
+          if (aspectDiff > 0.44) continue;
+
+          const quadCx = (tl.x + tr.x + bl.x + br.x) * 0.25;
+          const quadCy = (tl.y + tr.y + bl.y + br.y) * 0.25;
+          const centerDistNorm = Math.hypot(quadCx - frameCx, quadCy - frameCy) / maxFrameDist;
 
           const sizeConsistency = 1 - Math.abs(tl.bw - br.bw) / Math.max(tl.bw, br.bw);
           const totalScore = (tl.qScore + tr.qScore + bl.qScore + br.qScore)
                            + (sizeConsistency * 60)
-                           - (aspectDiff * 140)
-                           + (topW / w) * 40;
+                           - (aspectDiff * 155)
+                           + ((1 - centerDistNorm) * 85)
+                           + (topW / w) * 45;
 
           if (totalScore > bestQuadScore) {
             bestQuadScore = totalScore;
@@ -3773,17 +3839,25 @@ function detectFiducialCorners(imgData, w, h, expectedAspect = 1.32) {
 
   if (bestQuad) return bestQuad;
 
+  // Fallback berbasis rasio aspek & kedekatan pusat frame (tidak asal ambil sudut terjauh lintas 2 LJK)
   const fallbackPick = (arr, isTop) => {
     if (!arr.length) return null;
     const sorted = [...arr].sort((a, b) => isTop ? (a.y - b.y) : (b.y - a.y));
     return sorted[0];
   };
-  const ftl = fallbackPick(leftCandidates.filter(c => c.y < h * 0.45), true);
+  const ftl = fallbackPick(leftCandidates.filter(c => c.y < h * 0.50), true);
   const fbl = fallbackPick(leftCandidates.filter(c => c.y > h * 0.25), false);
-  const ftr = fallbackPick(rightCandidates.filter(c => c.y < h * 0.45), true);
+  const ftr = fallbackPick(rightCandidates.filter(c => c.y < h * 0.50), true);
   const fbr = fallbackPick(rightCandidates.filter(c => c.y > h * 0.25), false);
 
-  const found = !!(ftl && ftr && fbl && fbr && (fbl.y - ftl.y > h * 0.16) && (fbr.y - ftr.y > h * 0.16));
+  let found = false;
+  if (ftl && ftr && fbl && fbr && (fbl.y - ftl.y > h * 0.16) && (fbr.y - ftr.y > h * 0.16)) {
+    const fW = ((ftr.x - ftl.x) + (fbr.x - fbl.x)) * 0.5;
+    const fH = ((fbl.y - ftl.y) + (fbr.y - ftr.y)) * 0.5;
+    const fAsp = fW / Math.max(1, fH);
+    found = Math.abs(Math.log(fAsp / Math.max(0.4, expectedAspect))) <= 0.48;
+  }
+
   return {
     tl: ftl || { x: w * 0.05, y: h * 0.04 },
     tr: ftr || { x: w * 0.95, y: h * 0.04 },
@@ -3791,6 +3865,56 @@ function detectFiducialCorners(imgData, w, h, expectedAspect = 1.32) {
     br: fbr || { x: w * 0.95, y: h * 0.58 },
     found
   };
+}
+
+// Penyempurnaan Titik Sudut Sub-Piksel pada Gambar Resolusi Asli
+function refineAnchorCornersFullRes(srcCtx, srcW, srcH, corners) {
+  if (!corners || !corners.found) return;
+  const rPatch = Math.max(16, Math.round(srcW * 0.032));
+  ['tl', 'tr', 'br', 'bl'].forEach(key => {
+    const pt = corners[key];
+    const x0 = Math.max(0, Math.round(pt.x - rPatch));
+    const y0 = Math.max(0, Math.round(pt.y - rPatch));
+    const x1 = Math.min(srcW - 1, Math.round(pt.x + rPatch));
+    const y1 = Math.min(srcH - 1, Math.round(pt.y + rPatch));
+    const pw = x1 - x0 + 1;
+    const ph = y1 - y0 + 1;
+    if (pw < 8 || ph < 8) return;
+
+    const patch = srcCtx.getImageData(x0, y0, pw, ph).data;
+    let minG = 255, maxG = 0;
+    const grays = new Uint8Array(pw * ph);
+    for (let i = 0; i < pw * ph; i++) {
+      const p = i * 4;
+      const g = (77 * patch[p] + 150 * patch[p + 1] + 29 * patch[p + 2]) >> 8;
+      grays[i] = g;
+      if (g < minG) minG = g;
+      if (g > maxG) maxG = g;
+    }
+    if (maxG - minG < 45) return;
+
+    const thresh = minG + (maxG - minG) * 0.38;
+    let sumX = 0, sumY = 0, sumW = 0;
+    for (let y = 0; y < ph; y++) {
+      for (let x = 0; x < pw; x++) {
+        const g = grays[y * pw + x];
+        if (g <= thresh) {
+          const wgt = (thresh - g + 1);
+          sumX += (x0 + x) * wgt;
+          sumY += (y0 + y) * wgt;
+          sumW += wgt;
+        }
+      }
+    }
+    if (sumW > 0) {
+      const rx = sumX / sumW;
+      const ry = sumY / sumW;
+      if (Math.hypot(rx - pt.x, ry - pt.y) < rPatch * 0.65) {
+        pt.x = rx;
+        pt.y = ry;
+      }
+    }
+  });
 }
 
 function solveLinearSystem8(A, b) {
@@ -3876,7 +4000,7 @@ function reprocessOMR() {
 
   const srcW = loadedScanImage.width;
   const srcH = loadedScanImage.height;
-  const detectScale = Math.min(1, 900 / Math.max(srcW, srcH));
+  const detectScale = Math.min(1, 960 / Math.max(srcW, srcH));
   const dw = Math.round(srcW * detectScale);
   const dh = Math.round(srcH * detectScale);
 
@@ -3909,6 +4033,12 @@ function reprocessOMR() {
     bl: { x: detected.bl.x * invScale, y: detected.bl.y * invScale },
     found: detected.found
   };
+
+  if (corners.found) {
+    const srcCtx = loadedScanImage.getContext('2d');
+    refineAnchorCornersFullRes(srcCtx, srcW, srcH, corners);
+  }
+
   currentDetectedCorners = {
     tl: { ...corners.tl },
     tr: { ...corners.tr },
@@ -3986,19 +4116,25 @@ function processRectifiedOMRFromSource(corners, useCompact = false) {
   ctx.putImageData(outImg, 0, 0);
   applyScannerVisualEnhancement(ctx, layout.W, layout.omrH, scanFilterMode);
 
+  // Kalibrasi Sensitivitas Konsisten & Deteksi Dua Zona (Anti False-Positive pada Gelembung Kosong)
   const sensPct = parseInt(document.getElementById('omrThreshold').value) || 58;
-  const contrastFactor = 0.72 - ((sensPct - 30) / 55) * 0.28;
-  const maxDarkGray = Math.round(135 + ((sensPct - 30) / 55) * 65);
-  const minFillRatio = 0.22 - ((sensPct - 30) / 55) * 0.08;
+  const sNorm = Math.max(0, Math.min(1, (sensPct - 30) / 55)); // 0 (ketat) .. 1 (sensitif)
+  const relDropFactor = 0.62 + sNorm * 0.14; // default 58% -> 0.69
+  const absMinDrop = Math.round(46 - sNorm * 18); // default 58% -> 37
+  const minDarkRatio = 0.34 - sNorm * 0.12; // default 58% -> 0.28
+  const minOuterRatio = 0.20 - sNorm * 0.08; // default 58% -> 0.16 (cincin luar di dalam gelembung, bebas huruf cetak)
+  const minRelContrast = 0.23 - sNorm * 0.08; // default 58% -> 0.19
   const isSquareMode = layout.bubbleShape === 'square';
+  const bgSampleBuf = new Uint8Array(256);
 
   function measureBubbleDarkness(b) {
     const cx = b.cx, cy = b.cy;
-    const rIn = b.rPx * 0.72;
-    const rRing1 = b.rPx * 1.25;
-    const rRing2 = b.rPx * 1.75;
+    const rIn = b.rPx * 0.80;
+    const rCore = b.rPx * 0.44;
+    const rRing1 = b.rPx * 1.28;
+    const rRing2 = b.rPx * 1.80;
 
-    let bgSum = 0, bgCnt = 0;
+    let bgCnt = 0;
     const yMin = Math.max(0, Math.floor(cy - rRing2));
     const yMax = Math.min(layout.omrH - 1, Math.ceil(cy + rRing2));
     const xMin = Math.max(0, Math.floor(cx - rRing2));
@@ -4009,25 +4145,34 @@ function processRectifiedOMRFromSource(corners, useCompact = false) {
       const rowOff = y * layout.W;
       for (let x = xMin; x <= xMax; x++) {
         const dx = x - cx;
+        let inRing = false;
         if (isSquareMode) {
           const cheb = Math.max(Math.abs(dx), Math.abs(dy));
-          if (cheb >= rRing1 && cheb <= rRing2) {
-            bgSum += grayBuf[rowOff + x];
-            bgCnt++;
-          }
+          inRing = cheb >= rRing1 && cheb <= rRing2;
         } else {
           const d2 = dx * dx + dy * dy;
-          if (d2 >= rRing1 * rRing1 && d2 <= rRing2 * rRing2) {
-            bgSum += grayBuf[rowOff + x];
-            bgCnt++;
-          }
+          inRing = d2 >= rRing1 * rRing1 && d2 <= rRing2 * rRing2;
+        }
+        if (inRing && bgCnt < 256) {
+          bgSampleBuf[bgCnt++] = grayBuf[rowOff + x];
         }
       }
     }
-    const localBg = bgCnt > 0 ? bgSum / bgCnt : 225;
-    const darkCutoff = Math.min(maxDarkGray, localBg * contrastFactor);
+
+    // Gunakan rata-rata separuh paling terang (persentil atas) agar kertas putih tidak terpengaruh garis batas kotak sebelah
+    let localBg = 230;
+    if (bgCnt > 0) {
+      const slice = bgSampleBuf.subarray(0, bgCnt).sort();
+      const startIdx = Math.floor(bgCnt * 0.35);
+      let s = 0, c = 0;
+      for (let i = startIdx; i < bgCnt; i++) { s += slice[i]; c++; }
+      localBg = c > 0 ? s / c : 230;
+    }
+
+    const darkCutoff = Math.min(172, Math.min(localBg * relDropFactor, localBg - absMinDrop));
 
     let inSum = 0, darkPix = 0, inCnt = 0;
+    let outDarkPix = 0, outCnt = 0;
     const iyMin = Math.max(0, Math.floor(cy - rIn));
     const iyMax = Math.min(layout.omrH - 1, Math.ceil(cy + rIn));
     const ixMin = Math.max(0, Math.floor(cx - rIn));
@@ -4038,115 +4183,119 @@ function processRectifiedOMRFromSource(corners, useCompact = false) {
       const rowOff = y * layout.W;
       for (let x = ixMin; x <= ixMax; x++) {
         const dx = x - cx;
-        const inside = isSquareMode
-          ? (Math.abs(dx) <= rIn && Math.abs(dy) <= rIn)
-          : (dx * dx + dy * dy <= rIn * rIn);
+        let inside = false;
+        let inCore = false;
+        if (isSquareMode) {
+          const cheb = Math.max(Math.abs(dx), Math.abs(dy));
+          inside = cheb <= rIn;
+          inCore = cheb <= rCore;
+        } else {
+          const d2 = dx * dx + dy * dy;
+          inside = d2 <= rIn * rIn;
+          inCore = d2 <= rCore * rCore;
+        }
         if (inside) {
           const g = grayBuf[rowOff + x];
+          const isDark = g < darkCutoff;
           inSum += g;
-          if (g < darkCutoff) darkPix++;
+          if (isDark) darkPix++;
           inCnt++;
+          if (!inCore) {
+            if (isDark) outDarkPix++;
+            outCnt++;
+          }
         }
       }
     }
     const meanIn = inCnt > 0 ? inSum / inCnt : 255;
     const darkRatio = inCnt > 0 ? darkPix / inCnt : 0;
+    const outerDarkRatio = outCnt > 0 ? outDarkPix / outCnt : darkRatio;
     const relContrast = localBg > 0 ? (localBg - meanIn) / localBg : 0;
-    const score = darkRatio * 0.72 + Math.max(0, relContrast) * 0.45;
-    return { meanIn, darkRatio, relContrast, score, localBg };
+    const score = darkRatio * 0.50 + outerDarkRatio * 0.30 + Math.max(0, relContrast) * 0.35;
+    return { meanIn, darkRatio, outerDarkRatio, relContrast, score, localBg };
   }
+
+  const isBubbleMarked = (b) => {
+    const m = b.metric;
+    return m.darkRatio >= minDarkRatio &&
+           m.outerDarkRatio >= minOuterRatio &&
+           m.relContrast >= minRelContrast;
+  };
 
   const idBubbleMap = Array.from({ length: layout.idDigits }, () => []);
   const pgBubbleMap = Array.from({ length: state.config.jmlPG }, () => []);
   const bsBubbleMap = Array.from({ length: state.config.jmlBS }, () => []);
 
   layout.bubbles.forEach(b => {
-    const m = measureBubbleDarkness(b);
-    b.metric = m;
+    b.metric = measureBubbleDarkness(b);
     if (b.type === 'id_code' && idBubbleMap[b.digit]) idBubbleMap[b.digit].push(b);
     else if (b.type === 'pg' && pgBubbleMap[b.qIndex]) pgBubbleMap[b.qIndex].push(b);
     else if (b.type === 'bs' && bsBubbleMap[b.qIndex]) bsBubbleMap[b.qIndex].push(b);
   });
 
+  // Pembacaan Kolom Identitas (Nomor Peserta / NISN)
   let detectedIdStr = '';
   for (let d = 0; d < layout.idDigits; d++) {
     const group = idBubbleMap[d];
-    const sorted = [...group].sort((a, b) => b.metric.score - a.metric.score);
-    const best = sorted[0];
-    const second = sorted[1];
-    const filled = group.filter(b =>
-      b.metric.darkRatio >= minFillRatio &&
-      b.metric.score >= (best ? best.metric.score * 0.72 : 0.25) &&
-      b.metric.relContrast >= 0.13
-    );
-
-    if (filled.length === 1) {
-      detectedIdStr += String(filled[0].val);
-      filled[0].status = 'single';
-    } else if (filled.length === 0 && best && second && best.metric.relContrast >= 0.16 && best.metric.score > second.metric.score * 1.45) {
-      detectedIdStr += String(best.val);
-      best.status = 'single';
+    const marked = group.filter(isBubbleMarked).sort((a, b) => b.metric.score - a.metric.score);
+    if (marked.length === 1) {
+      detectedIdStr += String(marked[0].val);
+      marked[0].status = 'single';
+    } else if (marked.length > 1) {
+      if (marked[0].metric.score > marked[1].metric.score * 1.75 && marked[1].metric.darkRatio < minDarkRatio * 1.25) {
+        detectedIdStr += String(marked[0].val);
+        marked[0].status = 'single';
+      } else {
+        detectedIdStr += '?';
+        marked.forEach(b => { b.status = 'multi'; });
+      }
     } else {
       detectedIdStr += '?';
-      filled.forEach(b => { b.status = 'multi'; });
     }
   }
   lastDetectedIdDigits = detectedIdStr;
   resolveScannedStudent(detectedIdStr);
 
+  // Pembacaan Pilihan Ganda (PG)
   const detectedPG = [];
   for (let q = 0; q < state.config.jmlPG; q++) {
     const group = pgBubbleMap[q];
-    const sorted = [...group].sort((a, b) => b.metric.score - a.metric.score);
-    const best = sorted[0];
-    const second = sorted[1];
-    const filled = group.filter(b =>
-      b.metric.darkRatio >= minFillRatio &&
-      b.metric.score >= (best ? best.metric.score * 0.68 : 0.24) &&
-      b.metric.relContrast >= 0.12
-    );
-
-    if (filled.length === 0) {
-      if (best && second && best.metric.relContrast >= 0.15 && best.metric.score > second.metric.score * 1.48) {
-        detectedPG.push(best.letter);
-        best.status = 'single';
-      } else {
-        detectedPG.push('V');
-      }
-    } else if (filled.length === 1) {
-      detectedPG.push(filled[0].letter);
-      filled[0].status = 'single';
+    const marked = group.filter(isBubbleMarked).sort((a, b) => b.metric.score - a.metric.score);
+    if (marked.length === 0) {
+      detectedPG.push('V');
+    } else if (marked.length === 1) {
+      detectedPG.push(marked[0].letter);
+      marked[0].status = 'single';
     } else {
-      detectedPG.push('X');
-      filled.forEach(b => { b.status = 'multi'; });
+      if (marked[0].metric.score > marked[1].metric.score * 1.75 && marked[1].metric.darkRatio < minDarkRatio * 1.25) {
+        detectedPG.push(marked[0].letter);
+        marked[0].status = 'single';
+      } else {
+        detectedPG.push('X');
+        marked.forEach(b => { b.status = 'multi'; });
+      }
     }
   }
   currentScannedPG = detectedPG;
 
+  // Pembacaan Benar-Salah (B-S)
   const detectedBS = [];
   for (let q = 0; q < state.config.jmlBS; q++) {
     const group = bsBubbleMap[q];
-    const sorted = [...group].sort((a, b) => b.metric.score - a.metric.score);
-    const best = sorted[0];
-    const second = sorted[1];
-    const filled = group.filter(b =>
-      b.metric.darkRatio >= minFillRatio &&
-      b.metric.score >= (best ? best.metric.score * 0.68 : 0.24) &&
-      b.metric.relContrast >= 0.12
-    );
-    if (filled.length === 0) {
-      if (best && second && best.metric.relContrast >= 0.15 && best.metric.score > second.metric.score * 1.48) {
-        detectedBS.push(best.letter);
-        best.status = 'single';
-      } else {
-        detectedBS.push('V');
-      }
-    } else if (filled.length === 1) {
-      detectedBS.push(filled[0].letter);
-      filled[0].status = 'single';
+    const marked = group.filter(isBubbleMarked).sort((a, b) => b.metric.score - a.metric.score);
+    if (marked.length === 0) {
+      detectedBS.push('V');
+    } else if (marked.length === 1) {
+      detectedBS.push(marked[0].letter);
+      marked[0].status = 'single';
     } else {
-      detectedBS.push('X');
-      filled.forEach(b => { b.status = 'multi'; });
+      if (marked[0].metric.score > marked[1].metric.score * 1.75 && marked[1].metric.darkRatio < minDarkRatio * 1.25) {
+        detectedBS.push(marked[0].letter);
+        marked[0].status = 'single';
+      } else {
+        detectedBS.push('X');
+        marked.forEach(b => { b.status = 'multi'; });
+      }
     }
   }
   currentScannedBS = detectedBS;
@@ -4195,15 +4344,22 @@ function renderScanVerificationEditor(anchorsFound = true, detectedIdStr = '') {
   });
 
   if (state.config.jmlBS > 0) {
+    const sep = document.createElement('div');
+    sep.style.cssText = 'width:100%;font-size:0.75rem;font-weight:700;color:#1e40af;margin-top:6px;';
+    sep.textContent = 'Hasil Scan Benar-Salah (B / S):';
+    ed.appendChild(sep);
+
     const optsBS = ['V', 'B', 'S', 'X'];
+    const keyBS = (state.config.kunciBS || '').toUpperCase();
     currentScannedBS.forEach((ans, idx) => {
-      const k = (state.config.kunciBS || '')[idx] || '';
+      const k = keyBS[idx] || '';
       const ok = (ans === 'B' || ans === 'S') && ans === k;
-      const bg = (ans === 'V' || ans === 'X') ? '#fef3c7' : (ok ? '#dcfce7' : '#fee2e2');
-      const div = document.createElement('div');
-      div.style.cssText = `background:${bg}; border:1px solid #93c5fd; border-radius:6px; padding:3px 5px; font-size:0.75rem; text-align:center;`;
-      div.innerHTML = `<div style="font-weight:700;">BS-${getBSQuestionNo(idx)}</div><select onchange="currentScannedBS[${idx}]=this.value; updateScanSummaryOnly();" style="padding:1px 2px; font-size:0.75rem; font-weight:700; width:44px;">${optsBS.map(o => `<option value="${o}" ${o === ans ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
-      ed.appendChild(div);
+      const spec = ans === 'V' || ans === 'X';
+      const bg = spec ? '#fef3c7' : (!k ? '#e0f2fe' : (ok ? '#dcfce7' : '#fee2e2'));
+      const d = document.createElement('div');
+      d.style.cssText = `background:${bg};border:1px solid #cbd5e1;border-radius:6px;padding:3px 5px;font-size:0.75rem;text-align:center;`;
+      d.innerHTML = `<div style="font-weight:700;">${getBSQuestionNo(idx)}</div><select onchange="currentScannedBS[${idx}]=this.value;updateScanSummaryOnly();" style="padding:1px 2px;font-size:0.75rem;font-weight:700;width:44px;">${optsBS.map(o => `<option value="${o}" ${o === ans ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+      ed.appendChild(d);
     });
   }
 
@@ -4213,46 +4369,56 @@ function renderScanVerificationEditor(anchorsFound = true, detectedIdStr = '') {
 
 function syncScanUraianForStudent() {
   const urBox = document.getElementById('scanUraianInputs');
+  if (!urBox) return;
   urBox.innerHTML = '';
   const stIdx = parseInt(document.getElementById('scanStudentSelect').value) || 0;
   const st = state.students[stIdx] || { ur: [] };
   for (let u = 0; u < state.config.jmlUR; u++) {
     const maxS = state.config.maxUR[u] || 4;
-    const val = st.ur[u] !== undefined ? st.ur[u] : 0;
-    const noUr = state.config.jmlPG + (state.config.jmlBS || 0) + u + 1;
-    const d = document.createElement('div');
-    d.innerHTML = `<label>Skor Uraian No.${noUr} (Maks ${maxS})</label><input type="number" id="scanUr_${u}" min="0" max="${maxS}" step="0.5" value="${val}" />`;
-    urBox.appendChild(d);
+    const noSoal = state.config.jmlPG + (state.config.jmlBS || 0) + u + 1;
+    const val = st.ur && st.ur[u] !== undefined ? st.ur[u] : 0;
+    urBox.innerHTML += `
+      <div>
+        <label>Skor Uraian No.${noSoal} (Maks ${maxS})</label>
+        <input type="number" id="scanUr_${u}" min="0" max="${maxS}" step="0.5" value="${val}" />
+      </div>
+    `;
   }
 }
 
 function updateScanSummaryOnly(anchorsFound = true, detectedIdStr = lastDetectedIdDigits) {
-  let benarPG = 0;
-  currentScannedPG.forEach((a, i) => { if (a === (state.config.kunciPG[i] || '')) benarPG++; });
-  let benarBS = 0;
-  currentScannedBS.forEach((a, i) => { if ((a === 'B' || a === 'S') && a === ((state.config.kunciBS || '')[i] || '')) benarBS++; });
-  const totObj = state.config.jmlPG + (state.config.jmlBS || 0);
-  const skor = totObj ? (((benarPG + benarBS) / totObj) * 100).toFixed(1) : '0.0';
-  const anchorWarn = anchorsFound
-    ? `<span class="badge badge-tuntas">4 Jangkar Sudut Terkunci</span>`
-    : `<span class="badge badge-warn">Sudut Otomatis (Klik "Atur 4 Sudut Manual" jika meleset)</span>`;
-  const idInfo = detectedIdStr
-    ? `<span class="badge badge-info">${getIdFieldLabel()} LJK: <b>${detectedIdStr}</b></span> `
+  let benar = 0;
+  const kunci = state.config.kunciPG.toUpperCase();
+  currentScannedPG.forEach((a, i) => { if (a === kunci[i]) benar++; });
+  const totalPG = state.config.jmlPG;
+  const skorPG = totalPG > 0 ? ((benar / totalPG) * 100).toFixed(1) : '0.0';
+  const anchorMsg = anchorsFound
+    ? '<span style="color:#059669;font-weight:700;">✓ 4 Kotak Sudut Terdeteksi</span>'
+    : '<span style="color:#d97706;font-weight:700;">⚠ Sudut LJK kurang jelas (gunakan "🎯 Atur 4 Sudut Manual" jika meleset)</span>';
+  const idBadge = detectedIdStr
+    ? ` • ${getIdFieldLabel()}: <b><code>${detectedIdStr}</code></b>`
     : '';
+
+  let bsMsg = '';
+  if (state.config.jmlBS > 0) {
+    let bBS = 0;
+    const kBS = (state.config.kunciBS || '').toUpperCase();
+    currentScannedBS.forEach((a, i) => { if ((a === 'B' || a === 'S') && a === kBS[i]) bBS++; });
+    bsMsg = ` | Benar B-S: <b>${bBS}/${state.config.jmlBS}</b>`;
+  }
+
   document.getElementById('scanResultSummary').innerHTML =
-    `${anchorWarn} ${idInfo} • PG: <b>${benarPG}/${state.config.jmlPG}</b>` +
-    (state.config.jmlBS ? ` • B-S: <b>${benarBS}/${state.config.jmlBS}</b>` : '') +
-    ` • Nilai Objektif: <b>${skor}</b>`;
+    `${anchorMsg}${idBadge} • Benar PG: <b>${benar}/${totalPG}</b> (Nilai PG: <b>${skorPG}</b>)${bsMsg} • <span style="color:#64748b;">Ubah dropdown jika perlu</span>`;
 }
 
-function saveScannedResult(goToNext = true) {
-  if (!currentScannedPG.length && !currentScannedBS.length) return alert('Belum ada hasil scan LJK!');
-  const stIdx = parseInt(document.getElementById('scanStudentSelect').value) || 0;
-  if (currentScannedPG.length) {
-    state.students[stIdx].pg = currentScannedPG.join('');
-    state.students[stIdx].pgRawBlocks = null;
-  }
-  if (currentScannedBS.length) {
+function saveScannedResult(autoAdvance = true) {
+  const stIdx = parseInt(document.getElementById('scanStudentSelect').value);
+  if (isNaN(stIdx) || !state.students[stIdx]) return alert('Pilih siswa terlebih dahulu.');
+  if (currentScannedPG.length === 0 && currentScannedBS.length === 0) return alert('Belum ada hasil scan LJK untuk disimpan.');
+
+  state.students[stIdx].pg = currentScannedPG.join('');
+  state.students[stIdx].pgRawBlocks = null;
+  if (state.config.jmlBS > 0) {
     state.students[stIdx].bs = currentScannedBS.join('');
     state.students[stIdx].bsRawBlocks = null;
   }
@@ -4262,575 +4428,359 @@ function saveScannedResult(goToNext = true) {
     urArr.push(el ? (parseFloat(el.value) || 0) : 0);
   }
   state.students[stIdx].ur = urArr;
+
   sessionScanCount++;
-  document.getElementById('scanCounterBadge').textContent = `Terscan Sesi Ini: ${sessionScanCount} LJK`;
+  const badge = document.getElementById('scanCounterBadge');
+  if (badge) badge.textContent = `Terscan Sesi Ini: ${sessionScanCount} LJK`;
 
   saveState();
-  if (goToNext) {
+
+  if (autoAdvance) {
     prepareNextScan(true);
   } else {
-    alert(`Hasil scan LJK untuk ${state.students[stIdx].nama} berhasil disimpan!`);
+    alert(`Hasil scan LJK untuk ${state.students[stIdx].nama} (${state.meta.mapel}) berhasil disimpan permanen!`);
   }
 }
 
-// ==================== INPUT / EDIT JAWABAN BLOK 5 NOMOR (`1 - 5`, `6 - 10`, ...) ====================
-function getBlockCapacity(blockIdx, totalQuestions) {
-  const start = blockIdx * 5;
-  return Math.max(0, Math.min(5, totalQuestions - start));
+// ==================== TAB INPUT JAWABAN (BLOK 5 NOMOR SEPERTI EXCEL) ====================
+function getBlockCount(totalItems) {
+  return totalItems > 0 ? Math.ceil(totalItems / 5) : 0;
 }
 
-function getStudentBlocks(st, type, totalQuestions) {
-  const numBlocks = Math.ceil(totalQuestions / 5);
-  const rawProp = type === 'pg' ? 'pgRawBlocks' : 'bsRawBlocks';
-  const strProp = type === 'pg' ? 'pg' : 'bs';
-  const validRegex = type === 'pg' ? /[^A-EVX]/g : /[^BSVX]/g;
+function getBlockExpectedLength(totalItems, blockIdx) {
+  const start = blockIdx * 5;
+  return Math.max(0, Math.min(5, totalItems - start));
+}
 
-  if (Array.isArray(st[rawProp]) && st[rawProp].length === numBlocks) {
-    return st[rawProp].map((blk, bIdx) => {
-      const cap = getBlockCapacity(bIdx, totalQuestions);
-      return String(blk || '').toUpperCase().replace(validRegex, '').slice(0, cap);
+function getStudentSectionBlocks(student, section) {
+  const total = section === 'pg' ? state.config.jmlPG : (state.config.jmlBS || 0);
+  const numBlocks = getBlockCount(total);
+  if (numBlocks === 0) return [];
+  const rawKey = section === 'pg' ? 'pgRawBlocks' : 'bsRawBlocks';
+  const strKey = section === 'pg' ? 'pg' : 'bs';
+
+  if (Array.isArray(student[rawKey]) && student[rawKey].length === numBlocks) {
+    return student[rawKey].map((blk, bIdx) => {
+      const expLen = getBlockExpectedLength(total, bIdx);
+      return String(blk || '').slice(0, expLen);
     });
   }
 
-  const rawStr = String(st[strProp] || '').toUpperCase().replace(validRegex, '');
+  const fullStr = String(student[strKey] || '').toUpperCase();
   const blocks = [];
   for (let b = 0; b < numBlocks; b++) {
-    const cap = getBlockCapacity(b, totalQuestions);
-    const slice = rawStr.slice(b * 5, b * 5 + cap);
-    blocks.push(slice.replace(/V+$/g, ''));
+    const expLen = getBlockExpectedLength(total, b);
+    blocks.push(fullStr.slice(b * 5, b * 5 + expLen));
   }
-  st[rawProp] = blocks;
   return blocks;
 }
 
-function syncStudentStringFromBlocks(st, type, totalQuestions) {
-  const numBlocks = Math.ceil(totalQuestions / 5);
-  const blocks = getStudentBlocks(st, type, totalQuestions);
-  const strProp = type === 'pg' ? 'pg' : 'bs';
+function syncStudentSectionFromBlocks(student, section, blocks) {
+  const total = section === 'pg' ? state.config.jmlPG : (state.config.jmlBS || 0);
+  const numBlocks = getBlockCount(total);
+  const rawKey = section === 'pg' ? 'pgRawBlocks' : 'bsRawBlocks';
+  const strKey = section === 'pg' ? 'pg' : 'bs';
+
+  student[rawKey] = blocks.slice(0, numBlocks);
   let combined = '';
   for (let b = 0; b < numBlocks; b++) {
-    const cap = getBlockCapacity(b, totalQuestions);
-    const blk = (blocks[b] || '').padEnd(cap, 'V');
-    combined += blk;
+    const expLen = getBlockExpectedLength(total, b);
+    const val = (blocks[b] || '').slice(0, expLen);
+    combined += val.padEnd(expLen, 'V');
   }
-  st[strProp] = combined.replace(/V+$/g, '');
+  student[strKey] = combined;
 }
 
-function showInputToast(msg) {
-  const el = document.getElementById('inputJawabanToast');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
+function showInputJawabanToast(msg) {
+  const toast = document.getElementById('inputJawabanToast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.style.display = 'block';
   if (inputToastTimer) clearTimeout(inputToastTimer);
-  inputToastTimer = setTimeout(() => { el.style.display = 'none'; }, 3600);
+  inputToastTimer = setTimeout(() => {
+    toast.style.display = 'none';
+  }, 3600);
 }
 
-function updateInputWarningBanner() {
+function updateInputJawabanWarningBanner() {
   const banner = document.getElementById('inputJawabanWarningBanner');
   if (!banner) return;
-  const kPG = state.config.jmlPG;
-  const kBS = state.config.jmlBS || 0;
-  const numPGBlocks = Math.ceil(kPG / 5);
-  const numBSBlocks = Math.ceil(kBS / 5);
+  const incompleteStudents = [];
 
-  const warnings = [];
-  state.students.forEach((st) => {
-    const pgBlocks = getStudentBlocks(st, 'pg', kPG);
+  state.students.forEach(st => {
+    const issues = [];
+    const pgTotal = state.config.jmlPG;
+    const pgBlocks = getStudentSectionBlocks(st, 'pg');
     pgBlocks.forEach((blk, bIdx) => {
-      const cap = getBlockCapacity(bIdx, kPG);
-      if (blk.length > 0 && blk.length < cap) {
-        const sNo = bIdx * 5 + 1;
-        const eNo = bIdx * 5 + cap;
-        warnings.push(`<b>${escapeAttr(st.nama)}</b> (PG ${sNo}-${eNo}: baru ${blk.length}/${cap} huruf)`);
+      const exp = getBlockExpectedLength(pgTotal, bIdx);
+      if (blk.length > 0 && blk.length < exp) {
+        issues.push(`PG ${bIdx * 5 + 1}-${bIdx * 5 + exp} (${blk.length}/${exp})`);
       }
     });
 
-    if (kBS > 0) {
-      const bsBlocks = getStudentBlocks(st, 'bs', kBS);
-      bsBlocks.forEach((blk, bIdx) => {
-        const cap = getBlockCapacity(bIdx, kBS);
-        if (blk.length > 0 && blk.length < cap) {
-          const sNo = kPG + bIdx * 5 + 1;
-          const eNo = kPG + bIdx * 5 + cap;
-          warnings.push(`<b>${escapeAttr(st.nama)}</b> (B-S ${sNo}-${eNo}: baru ${blk.length}/${cap} huruf)`);
-        }
-      });
+    const bsTotal = state.config.jmlBS || 0;
+    const bsBlocks = getStudentSectionBlocks(st, 'bs');
+    bsBlocks.forEach((blk, bIdx) => {
+      const exp = getBlockExpectedLength(bsTotal, bIdx);
+      if (blk.length > 0 && blk.length < exp) {
+        const sNo = getBSQuestionNo(bIdx * 5);
+        const eNo = getBSQuestionNo(bIdx * 5 + exp - 1);
+        issues.push(`B-S ${sNo}-${eNo} (${blk.length}/${exp})`);
+      }
+    });
+
+    if (issues.length > 0) {
+      incompleteStudents.push(`<b>${escapeAttr(st.nama)}</b> [${issues.join(', ')}]`);
     }
   });
 
-  if (warnings.length > 0) {
+  if (incompleteStudents.length > 0) {
     banner.style.display = 'block';
-    const previewList = warnings.slice(0, 6).join(', ');
-    const extraCount = warnings.length > 6 ? ` dan ${warnings.length - 6} kolom lainnya` : '';
-    banner.innerHTML = `⚠️ <b>Peringatan Kolom Belum Lengkap (&lt; 5 Jawaban):</b> ${previewList}${extraCount}.`;
+    banner.innerHTML = `⚠️ <b>Peringatan Kolom Jawaban Belum Lengkap:</b> Terdapat kolom yang terisi kurang dari jumlah nomor soalnya pada: ${incompleteStudents.join('; ')}.`;
   } else {
     banner.style.display = 'none';
   }
 }
 
-function handleBlockInput(inputEl, stIdx, type, blockIdx, cap) {
-  const validRegex = type === 'pg' ? /[^A-EVX]/g : /[^BSVX]/g;
-  const totalQ = type === 'pg' ? state.config.jmlPG : (state.config.jmlBS || 0);
-  const clean = inputEl.value.toUpperCase().replace(validRegex, '').slice(0, cap);
+function handleBlockInputKeydown(ev, stIdx, section, blkIdx) {
+  const input = ev.target;
+  const total = section === 'pg' ? state.config.jmlPG : (state.config.jmlBS || 0);
+  const expLen = getBlockExpectedLength(total, blkIdx);
+  const allowedControl = [
+    'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+    'Tab', 'Home', 'End', 'Enter'
+  ];
+  if (allowedControl.includes(ev.key) || ev.ctrlKey || ev.metaKey || ev.altKey) {
+    return;
+  }
+  const hasSelection = (input.selectionEnd - input.selectionStart) > 0;
+  if (input.value.length >= expLen && !hasSelection) {
+    ev.preventDefault();
+    showInputJawabanToast(`🔒 Kolom sudah terisi penuh (${expLen}/${expLen} jawaban) dan otomatis terkunci. Gunakan Backspace/Delete untuk mengubah.`);
+  }
+}
+
+function handleBlockInputChange(inputEl, stIdx, section, blkIdx) {
+  const st = state.students[stIdx];
+  if (!st) return;
+  const total = section === 'pg' ? state.config.jmlPG : (state.config.jmlBS || 0);
+  const expLen = getBlockExpectedLength(total, blkIdx);
+  const maxOptLetter = ['A', 'B', 'C', 'D', 'E'][Math.min(5, Math.max(3, state.config.opsiPG)) - 1];
+
+  let clean = inputEl.value.toUpperCase();
+  if (section === 'pg') {
+    const rx = new RegExp(`[^A-${maxOptLetter}VX]`, 'g');
+    clean = clean.replace(rx, '');
+  } else {
+    clean = clean.replace(/[^BSVX]/g, '');
+  }
+
+  if (clean.length > expLen) {
+    clean = clean.slice(0, expLen);
+  }
   inputEl.value = clean;
 
-  const st = state.students[stIdx];
-  const blocks = getStudentBlocks(st, type, totalQ);
-  blocks[blockIdx] = clean;
-  st[type === 'pg' ? 'pgRawBlocks' : 'bsRawBlocks'] = blocks;
-  syncStudentStringFromBlocks(st, type, totalQ);
+  const blocks = getStudentSectionBlocks(st, section);
+  blocks[blkIdx] = clean;
+  syncStudentSectionFromBlocks(st, section, blocks);
 
-  const cell = inputEl.parentElement;
-  const hint = cell ? cell.querySelector('.blk-hint') : null;
-  inputEl.classList.remove('input-full', 'input-short');
-  if (cell) cell.classList.remove('is-full', 'is-warn');
-
-  if (clean.length === cap) {
+  const td = inputEl.closest('td');
+  const hint = td ? td.querySelector('.blk-hint') : null;
+  if (clean.length === expLen) {
+    inputEl.classList.remove('input-short');
     inputEl.classList.add('input-full');
-    if (cell) cell.classList.add('is-full');
-    if (hint) {
-      hint.className = 'blk-hint ok';
-      hint.textContent = `✓ Lengkap (${cap}/${cap})`;
+    if (td) { td.classList.remove('is-warn'); td.classList.add('is-full'); }
+    if (hint) { hint.className = 'blk-hint ok'; hint.textContent = `✓ ${clean.length}/${expLen} (Terkunci)`; }
+    const nextInp = td && td.nextElementSibling ? td.nextElementSibling.querySelector('input.blk-input') : null;
+    if (nextInp) {
+      nextInp.focus();
+      nextInp.select();
     }
-    const allInputs = Array.from(document.querySelectorAll('#tbodyInputJawaban .blk-input'));
-    const curPos = allInputs.indexOf(inputEl);
-    if (curPos >= 0 && curPos + 1 < allInputs.length) {
-      allInputs[curPos + 1].focus();
-      allInputs[curPos + 1].select();
-    }
-  } else if (clean.length > 0 && clean.length < cap) {
+  } else if (clean.length > 0) {
+    inputEl.classList.remove('input-full');
     inputEl.classList.add('input-short');
-    if (cell) cell.classList.add('is-warn');
-    if (hint) {
-      hint.className = 'blk-hint warn';
-      hint.textContent = `⚠️ Kurang (${clean.length}/${cap})`;
-    }
+    if (td) { td.classList.remove('is-full'); td.classList.add('is-warn'); }
+    if (hint) { hint.className = 'blk-hint warn'; hint.textContent = `⚠ Kurang (${clean.length}/${expLen})`; }
   } else {
-    if (hint) {
-      hint.className = 'blk-hint empty';
-      hint.textContent = `0/${cap}`;
-    }
+    inputEl.classList.remove('input-full', 'input-short');
+    if (td) { td.classList.remove('is-full', 'is-warn'); }
+    if (hint) { hint.className = 'blk-hint empty'; hint.textContent = `0/${expLen}`; }
   }
 
-  const a = computeAllAnalytics();
-  const skorCell = document.getElementById(`rowSkorCell_${stIdx}`);
-  if (skorCell) {
-    skorCell.innerHTML = `<b>${a.objMatrix[stIdx].skor}/${a.objMatrix[stIdx].total}</b> (${a.objMatrix[stIdx].nilai.toFixed(0)})`;
-  }
-
-  updateInputWarningBanner();
   saveState(true);
+  updateInputJawabanWarningBanner();
 }
 
-function handleBlockKeydown(ev, inputEl, cap) {
-  if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-  if (ev.key.length === 1) {
-    const selLen = Math.abs((inputEl.selectionEnd || 0) - (inputEl.selectionStart || 0));
-    if (inputEl.value.length >= cap && selLen === 0) {
-      ev.preventDefault();
-      showInputToast(`🔒 Kolom ini sudah terkunci penuh (${cap}/${cap} jawaban). Tekan Backspace/Delete untuk mengubah.`);
-    }
-  }
-}
-
-function handleBlockBlur(inputEl, stIdx, type, blockIdx, cap) {
-  const val = inputEl.value;
-  if (val.length > 0 && val.length < cap) {
+function handleBlockInputBlur(inputEl, stIdx, section, blkIdx) {
+  const total = section === 'pg' ? state.config.jmlPG : (state.config.jmlBS || 0);
+  const expLen = getBlockExpectedLength(total, blkIdx);
+  const val = inputEl.value || '';
+  if (val.length > 0 && val.length < expLen) {
     const st = state.students[stIdx];
-    const startNo = (type === 'bs' ? state.config.jmlPG : 0) + blockIdx * 5 + 1;
-    const endNo = startNo + cap - 1;
-    showInputToast(`⚠️ Peringatan: Jawaban ${st.nama} pada kolom ${startNo} - ${endNo} baru terisi ${val.length} dari ${cap} soal!`);
+    const startNo = section === 'pg' ? (blkIdx * 5 + 1) : getBSQuestionNo(blkIdx * 5);
+    const endNo = section === 'pg' ? (blkIdx * 5 + expLen) : getBSQuestionNo(blkIdx * 5 + expLen - 1);
+    showInputJawabanToast(`⚠️ Peringatan (${st ? st.nama : 'Siswa'}): Kolom ${startNo} - ${endNo} baru terisi ${val.length} dari ${expLen} jawaban!`);
   }
+  updateInputJawabanWarningBanner();
 }
 
 function renderInputJawabanTable() {
   const thead = document.getElementById('theadInputJawaban');
   const tbody = document.getElementById('tbodyInputJawaban');
-  const a = computeAllAnalytics();
+  const filterQ = (document.getElementById('searchInputJawaban')?.value || '').trim().toLowerCase();
+
   const kPG = state.config.jmlPG;
   const kBS = state.config.jmlBS || 0;
   const kUR = state.config.jmlUR;
-  const numPGBlocks = Math.ceil(kPG / 5);
-  const numBSBlocks = Math.ceil(kBS / 5);
-  const filterQ = (document.getElementById('searchInputJawaban')?.value || '').trim().toLowerCase();
+  const pgBlkCount = getBlockCount(kPG);
+  const bsBlkCount = getBlockCount(kBS);
 
-  let topRow = `
+  let row1 = `
     <tr>
-      <th rowspan="2" style="width:42px;">NO</th>
-      <th rowspan="2" style="width:110px;">${getIdFieldLabel()}</th>
-      <th rowspan="2" style="min-width:155px; text-align:left;">NAMA PESERTA</th>
-      <th colspan="${numPGBlocks}">DATA JAWABAN PILIHAN GANDA (${kPG} SOAL • BLOK 5 NOMOR)</th>
+      <th rowspan="2" style="width:42px;">No</th>
+      <th rowspan="2" style="min-width:110px;">${getIdFieldLabel()}</th>
+      <th rowspan="2" style="min-width:165px;">Nama Siswa</th>
+      ${pgBlkCount > 0 ? `<th colspan="${pgBlkCount}">DATA JAWABAN PILIHAN GANDA (${kPG} SOAL • BLOK 5 NOMOR)</th>` : ''}
+      ${bsBlkCount > 0 ? `<th colspan="${bsBlkCount}">BENAR-SALAH (${kBS} SOAL • B/S)</th>` : ''}
+      ${kUR > 0 ? `<th colspan="${kUR}">SKOR URAIAN</th>` : ''}
+    </tr>
   `;
-  if (numBSBlocks > 0) {
-    topRow += `<th colspan="${numBSBlocks}">BENAR - SALAH (${kBS} SOAL)</th>`;
-  }
-  topRow += `<th rowspan="2">SKOR / NILAI<br>OBJEKTIF</th>`;
-  for (let u = 0; u < kUR; u++) {
-    topRow += `<th rowspan="2">URAIAN<br>NO.${kPG + kBS + u + 1}<br>(Maks ${state.config.maxUR[u] || 4})</th>`;
-  }
-  topRow += `<th rowspan="2">NILAI<br>REMEDIAL</th></tr>`;
 
-  let subRow = `<tr>`;
-  for (let b = 0; b < numPGBlocks; b++) {
-    const sNo = b * 5 + 1;
-    const eNo = Math.min(kPG, (b + 1) * 5);
-    subRow += `<th>${sNo} - ${eNo}</th>`;
+  let row2 = '<tr>';
+  for (let b = 0; b < pgBlkCount; b++) {
+    const startNo = b * 5 + 1;
+    const endNo = Math.min(kPG, (b + 1) * 5);
+    row2 += `<th>${startNo} - ${endNo}</th>`;
   }
-  for (let b = 0; b < numBSBlocks; b++) {
-    const sNo = kPG + b * 5 + 1;
-    const eNo = kPG + Math.min(kBS, (b + 1) * 5);
-    subRow += `<th>${sNo} - ${eNo}</th>`;
+  for (let b = 0; b < bsBlkCount; b++) {
+    const startNo = getBSQuestionNo(b * 5);
+    const endNo = getBSQuestionNo(Math.min(kBS, (b + 1) * 5) - 1);
+    row2 += `<th>${startNo} - ${endNo}</th>`;
   }
-  subRow += `</tr>`;
-  thead.innerHTML = topRow + subRow;
+  for (let u = 0; u < kUR; u++) {
+    const noUr = kPG + kBS + u + 1;
+    row2 += `<th>U${u + 1} (#${noUr})<br><small style="font-weight:400;">Maks ${state.config.maxUR[u] || 4}</small></th>`;
+  }
+  row2 += '</tr>';
+  thead.innerHTML = row1 + row2;
 
   tbody.innerHTML = '';
   state.students.forEach((st, idx) => {
-    const matchFilter = !filterQ || (st.nama || '').toLowerCase().includes(filterQ) || (st.nis || '').toLowerCase().includes(filterQ);
-    if (!matchFilter) return;
-
-    const pgBlocks = getStudentBlocks(st, 'pg', kPG);
-    const bsBlocks = kBS > 0 ? getStudentBlocks(st, 'bs', kBS) : [];
-
-    let rowHtml = `
-      <td style="text-align:center;">${idx + 1}</td>
-      <td style="text-align:center; font-family:monospace;">${escapeAttr(st.nis || '-')}</td>
-      <td><b>${escapeAttr(st.nama)}</b></td>
-    `;
-
-    for (let b = 0; b < numPGBlocks; b++) {
-      const cap = getBlockCapacity(b, kPG);
-      const val = pgBlocks[b] || '';
-      const isFull = val.length === cap;
-      const isShort = val.length > 0 && val.length < cap;
-      const cellCls = isFull ? 'blk-cell is-full' : (isShort ? 'blk-cell is-warn' : 'blk-cell');
-      const inpCls = isFull ? 'blk-input input-full' : (isShort ? 'blk-input input-short' : 'blk-input');
-      const hintCls = isFull ? 'blk-hint ok' : (isShort ? 'blk-hint warn' : 'blk-hint empty');
-      const hintTxt = isFull ? `✓ Lengkap (${cap}/${cap})` : (isShort ? `⚠️ Kurang (${val.length}/${cap})` : `0/${cap}`);
-
-      rowHtml += `
-        <td class="${cellCls}">
-          <input class="${inpCls}" value="${escapeAttr(val)}" maxlength="${cap}" placeholder="${'•'.repeat(cap)}"
-            onkeydown="handleBlockKeydown(event, this, ${cap})"
-            oninput="handleBlockInput(this, ${idx}, 'pg', ${b}, ${cap})"
-            onblur="handleBlockBlur(this, ${idx}, 'pg', ${b}, ${cap})" />
-          <span class="${hintCls}">${hintTxt}</span>
-        </td>
-      `;
-    }
-
-    for (let b = 0; b < numBSBlocks; b++) {
-      const cap = getBlockCapacity(b, kBS);
-      const val = bsBlocks[b] || '';
-      const isFull = val.length === cap;
-      const isShort = val.length > 0 && val.length < cap;
-      const cellCls = isFull ? 'blk-cell is-full' : (isShort ? 'blk-cell is-warn' : 'blk-cell');
-      const inpCls = isFull ? 'blk-input input-full' : (isShort ? 'blk-input input-short' : 'blk-input');
-      const hintCls = isFull ? 'blk-hint ok' : (isShort ? 'blk-hint warn' : 'blk-hint empty');
-      const hintTxt = isFull ? `✓ Lengkap (${cap}/${cap})` : (isShort ? `⚠️ Kurang (${val.length}/${cap})` : `0/${cap}`);
-
-      rowHtml += `
-        <td class="${cellCls}">
-          <input class="${inpCls}" value="${escapeAttr(val)}" maxlength="${cap}" placeholder="${'•'.repeat(cap)}"
-            onkeydown="handleBlockKeydown(event, this, ${cap})"
-            oninput="handleBlockInput(this, ${idx}, 'bs', ${b}, ${cap})"
-            onblur="handleBlockBlur(this, ${idx}, 'bs', ${b}, ${cap})" />
-          <span class="${hintCls}">${hintTxt}</span>
-        </td>
-      `;
-    }
-
-    rowHtml += `<td id="rowSkorCell_${idx}" style="text-align:center;"><b>${a.objMatrix[idx].skor}/${a.objMatrix[idx].total}</b> (${a.objMatrix[idx].nilai.toFixed(0)})</td>`;
-
-    for (let u = 0; u < kUR; u++) {
-      const maxS = state.config.maxUR[u] || 4;
-      rowHtml += `<td style="text-align:center;"><input type="number" min="0" max="${maxS}" step="0.5" value="${st.ur[u] ?? 0}" style="width:60px; padding:4px; text-align:center;"
-        onchange="state.students[${idx}].ur[${u}]=parseFloat(this.value)||0; saveState();" /></td>`;
-    }
-
-    rowHtml += `<td style="text-align:center;"><input type="number" min="0" max="100" value="${st.remedial ?? ''}" placeholder="-" style="width:65px; padding:4px; text-align:center;"
-      onchange="state.students[${idx}].remedial=this.value===''?null:parseFloat(this.value); saveState();" /></td>`;
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = rowHtml;
-    tbody.appendChild(tr);
-  });
-
-  updateInputWarningBanner();
-}
-
-// ==================== MESIN DIAGRAM SVG 3D ALA DIAGRAM KAU.PDF ====================
-// 1. Diagram Donat 3D (Uraian) & Diagram Pie 3D (Benar-Salah)
-function build3DPieOrDonutSVG(slices, uid, isDonut = true, centerTitle = '') {
-  const total = slices.reduce((s, x) => s + x.value, 0);
-  if (total === 0) {
-    return `<div style="text-align:center;color:#64748b;padding:28px 12px;font-size:0.84rem;">Belum ada data untuk ditampilkan.</div>`;
-  }
-
-  const cx = 215, cy = 96, rx = 134, ry = 74, depth = 22;
-  const innerRatio = isDonut ? 0.44 : 0;
-  const irx = rx * innerRatio, iry = ry * innerRatio;
-
-  let curAngle = -Math.PI / 2;
-  const segs = [];
-  slices.forEach((sl) => {
-    if (sl.value <= 0) return;
-    const sweep = (sl.value / total) * Math.PI * 2;
-    segs.push({
-      ...sl,
-      start: curAngle,
-      end: curAngle + sweep,
-      mid: curAngle + sweep / 2,
-      pct: Math.round((sl.value / total) * 100)
-    });
-    curAngle += sweep;
-  });
-
-  let outerWalls = '';
-  let innerWalls = '';
-  let topFaces = '';
-  let labelTexts = '';
-
-  const pt = (a, rX, rY, offY = 0) => `${(cx + rX * Math.cos(a)).toFixed(2)},${(cy + offY + rY * Math.sin(a)).toFixed(2)}`;
-
-  // Helper menggambar busur dinding silinder pada sub-interval [a0, a1]
-  const makeWallPath = (a0, a1, rX, rY) => {
-    const la = (a1 - a0) > Math.PI ? 1 : 0;
-    return `M ${pt(a0, rX, rY, 0)} A ${rX} ${rY} 0 ${la} 1 ${pt(a1, rX, rY, 0)} L ${pt(a1, rX, rY, depth)} A ${rX} ${rY} 0 ${la} 0 ${pt(a0, rX, rY, depth)} Z`;
-  };
-
-  segs.forEach((s) => {
-    // Jika satu irisan penuh 100% (sweep >= 2*PI - 0.001)
-    if (s.end - s.start >= Math.PI * 2 - 0.001) {
-      if (isDonut) {
-        innerWalls += `<path d="${makeWallPath(Math.PI, Math.PI * 2, irx, iry)}" fill="${s.dark}" stroke="#0f172a" stroke-width="1.2" stroke-linejoin="round"/>`;
-      }
-      outerWalls += `<path d="${makeWallPath(0, Math.PI, rx, ry)}" fill="${s.dark}" stroke="#0f172a" stroke-width="1.2" stroke-linejoin="round"/>`;
-
-      if (isDonut) {
-        const dFull = `M ${cx - rx},${cy} A ${rx} ${ry} 0 1 1 ${cx + rx},${cy} A ${rx} ${ry} 0 1 1 ${cx - rx},${cy} ` +
-                      `M ${cx - irx},${cy} A ${irx} ${iry} 0 1 0 ${cx + irx},${cy} A ${irx} ${iry} 0 1 0 ${cx - irx},${cy} Z`;
-        topFaces += `<path d="${dFull}" fill="${s.color}" fill-rule="evenodd" stroke="#0f172a" stroke-width="1.25"/>`;
-      } else {
-        topFaces += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${s.color}" stroke="#0f172a" stroke-width="1.25"/>`;
-      }
-      labelTexts += `<text x="${cx}" y="${(cy + (isDonut ? ry * 0.72 : 4)).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">100%</text>`;
+    if (filterQ && !(st.nama || '').toLowerCase().includes(filterQ) && !(st.nis || '').toLowerCase().includes(filterQ)) {
       return;
     }
 
-    // 1. Dinding dalam lubang donat (bagian belakang: sin(theta) <= 0 => [-PI/2, 0] dan [PI, 1.5*PI])
-    if (isDonut) {
-      const backIntervals = [
-        [Math.max(s.start, -Math.PI / 2), Math.min(s.end, 0)],
-        [Math.max(s.start, Math.PI), Math.min(s.end, 1.5 * Math.PI)]
-      ];
-      backIntervals.forEach(([a0, a1]) => {
-        if (a1 - a0 > 0.002) {
-          innerWalls += `<path d="${makeWallPath(a0, a1, irx, iry)}" fill="${s.dark}" stroke="#0f172a" stroke-width="1.2" stroke-linejoin="round"/>`;
-        }
-      });
-    }
+    const pgBlocks = getStudentSectionBlocks(st, 'pg');
+    const bsBlocks = getStudentSectionBlocks(st, 'bs');
 
-    // 2. Dinding luar 3D (bagian depan: sin(theta) >= 0 => [0, PI])
-    const f0 = Math.max(s.start, 0);
-    const f1 = Math.min(s.end, Math.PI);
-    if (f1 - f0 > 0.002) {
-      outerWalls += `<path d="${makeWallPath(f0, f1, rx, ry)}" fill="${s.dark}" stroke="#0f172a" stroke-width="1.2" stroke-linejoin="round"/>`;
-    }
-
-    // 3. Permukaan atas irisan
-    const largeArc = (s.end - s.start) > Math.PI ? 1 : 0;
-    let dTop = '';
-    if (isDonut) {
-      dTop = `M ${pt(s.start, rx, ry, 0)} A ${rx} ${ry} 0 ${largeArc} 1 ${pt(s.end, rx, ry, 0)} ` +
-             `L ${pt(s.end, irx, iry, 0)} A ${irx} ${iry} 0 ${largeArc} 0 ${pt(s.start, irx, iry, 0)} Z`;
-    } else {
-      dTop = `M ${cx},${cy} L ${pt(s.start, rx, ry, 0)} A ${rx} ${ry} 0 ${largeArc} 1 ${pt(s.end, rx, ry, 0)} Z`;
-    }
-    topFaces += `<path d="${dTop}" fill="${s.color}" stroke="#0f172a" stroke-width="1.25" stroke-linejoin="round"/>`;
-
-    // 4. Label persentase di atas irisan
-    if (s.pct >= 6) {
-      const rFactor = isDonut ? 0.72 : 0.60;
-      const lx = cx + rx * rFactor * Math.cos(s.mid);
-      const ly = cy + ry * rFactor * Math.sin(s.mid) + 4.5;
-      labelTexts += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">${s.pct}%</text>`;
-    }
-  });
-
-  const holeFloor = isDonut
-    ? `<ellipse cx="${cx}" cy="${cy + depth * 0.42}" rx="${irx}" ry="${iry}" fill="#dbe4f0"/>`
-    : '';
-
-  const centerTextSvg = (isDonut && centerTitle)
-    ? `<text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="13.5" font-weight="800" fill="#1e3a8a">${escapeAttr(centerTitle)}</text>`
-    : '';
-
-  return `
-    <svg viewBox="0 0 430 212" class="chart-svg" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="${cx + 3}" cy="${cy + depth + 6}" rx="${rx + 3}" ry="${ry + 2}" fill="#cbd5e1" opacity="0.65"/>
-      ${holeFloor}
-      ${innerWalls}
-      ${outerWalls}
-      ${topFaces}
-      ${centerTextSvg}
-      ${labelTexts}
-    </svg>
-  `;
-}
-
-// 2. Diagram Batang 3D Kategori (Untuk Pilihan Ganda - PG)
-function build3DBarCategorySVG(slices, uid) {
-  const total = slices.reduce((s, x) => s + x.value, 0);
-  if (total === 0) {
-    return `<div style="text-align:center;color:#64748b;padding:28px 12px;font-size:0.84rem;">Belum ada data untuk ditampilkan.</div>`;
-  }
-
-  const W = 430, H = 212;
-  const padL = 44, padR = 24, padT = 26, padB = 34;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
-  const dx3d = 12, dy3d = -9;
-
-  let gridSvg = '';
-  [0, 25, 50, 75, 100].forEach(pct => {
-    const y = padT + plotH - (pct / 100) * plotH;
-    gridSvg += `
-      <line x1="${padL}" y1="${y}" x2="${padL + dx3d}" y2="${y + dy3d}" stroke="#cbd5e1" stroke-width="1"/>
-      <line x1="${padL + dx3d}" y1="${y + dy3d}" x2="${W - padR}" y2="${y + dy3d}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="${pct === 0 ? 'none' : '3,3'}"/>
-      <text x="${padL - 6}" y="${y + 3.5}" text-anchor="end" font-size="9.5" font-weight="600" fill="#64748b">${pct}%</text>
+    let cellsHtml = `
+      <td style="text-align:center;">${idx + 1}</td>
+      <td style="font-family:monospace;">${escapeAttr(st.nis || '-')}</td>
+      <td><b>${escapeAttr(st.nama)}</b></td>
     `;
-  });
 
-  // Lantai 3D
-  const floorY = padT + plotH;
-  const floorSvg = `
-    <polygon points="${padL},${floorY} ${padL + dx3d},${floorY + dy3d} ${W - padR},${floorY + dy3d} ${W - padR - dx3d},${floorY}"
-             fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
-    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${floorY}" stroke="#94a3b8" stroke-width="1.2"/>
-  `;
+    pgBlocks.forEach((blkVal, bIdx) => {
+      const expLen = getBlockExpectedLength(kPG, bIdx);
+      const isFull = blkVal.length === expLen;
+      const isWarn = blkVal.length > 0 && blkVal.length < expLen;
+      const tdCls = isFull ? 'blk-cell is-full' : (isWarn ? 'blk-cell is-warn' : 'blk-cell');
+      const inpCls = isFull ? 'blk-input input-full' : (isWarn ? 'blk-input input-short' : 'blk-input');
+      const hintCls = isFull ? 'blk-hint ok' : (isWarn ? 'blk-hint warn' : 'blk-hint empty');
+      const hintTxt = isFull ? `✓ ${blkVal.length}/${expLen} (Terkunci)` : (isWarn ? `⚠ Kurang (${blkVal.length}/${expLen})` : `0/${expLen}`);
+      cellsHtml += `
+        <td class="${tdCls}">
+          <input class="${inpCls}" value="${escapeAttr(blkVal)}" maxlength="${expLen}"
+            placeholder="${'·'.repeat(expLen)}"
+            onkeydown="handleBlockInputKeydown(event, ${idx}, 'pg', ${bIdx})"
+            oninput="handleBlockInputChange(this, ${idx}, 'pg', ${bIdx})"
+            onblur="handleBlockInputBlur(this, ${idx}, 'pg', ${bIdx})" />
+          <span class="${hintCls}">${hintTxt}</span>
+        </td>
+      `;
+    });
 
-  const count = slices.length;
-  const slotW = (plotW - dx3d) / count;
-  const barW = Math.min(54, slotW * 0.56);
+    bsBlocks.forEach((blkVal, bIdx) => {
+      const expLen = getBlockExpectedLength(kBS, bIdx);
+      const isFull = blkVal.length === expLen;
+      const isWarn = blkVal.length > 0 && blkVal.length < expLen;
+      const tdCls = isFull ? 'blk-cell is-full' : (isWarn ? 'blk-cell is-warn' : 'blk-cell');
+      const inpCls = isFull ? 'blk-input input-full' : (isWarn ? 'blk-input input-short' : 'blk-input');
+      const hintCls = isFull ? 'blk-hint ok' : (isWarn ? 'blk-hint warn' : 'blk-hint empty');
+      const hintTxt = isFull ? `✓ ${blkVal.length}/${expLen} (Terkunci)` : (isWarn ? `⚠ Kurang (${blkVal.length}/${expLen})` : `0/${expLen}`);
+      cellsHtml += `
+        <td class="${tdCls}">
+          <input class="${inpCls}" value="${escapeAttr(blkVal)}" maxlength="${expLen}"
+            placeholder="${'·'.repeat(expLen)}"
+            onkeydown="handleBlockInputKeydown(event, ${idx}, 'bs', ${bIdx})"
+            oninput="handleBlockInputChange(this, ${idx}, 'bs', ${bIdx})"
+            onblur="handleBlockInputBlur(this, ${idx}, 'bs', ${bIdx})" />
+          <span class="${hintCls}">${hintTxt}</span>
+        </td>
+      `;
+    });
 
-  let barsSvg = '';
-  slices.forEach((sl, idx) => {
-    const pct = total > 0 ? (sl.value / total) * 100 : 0;
-    const pctRound = Math.round(pct);
-    const barH = sl.value > 0 ? Math.max(6, (pct / 100) * plotH) : 3;
-    const bx = padL + idx * slotW + (slotW - barW) / 2;
-    const by = floorY - barH;
-
-    // Front face
-    barsSvg += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}" fill="${sl.color}" stroke="#0f172a" stroke-width="1.15" stroke-linejoin="round"/>`;
-    // Top face
-    barsSvg += `<polygon points="${bx.toFixed(1)},${by.toFixed(1)} ${(bx + dx3d).toFixed(1)},${(by + dy3d).toFixed(1)} ${(bx + barW + dx3d).toFixed(1)},${(by + dy3d).toFixed(1)} ${(bx + barW).toFixed(1)},${by.toFixed(1)}" fill="${sl.light || sl.color}" stroke="#0f172a" stroke-width="1.15" stroke-linejoin="round"/>`;
-    // Right face
-    barsSvg += `<polygon points="${(bx + barW).toFixed(1)},${by.toFixed(1)} ${(bx + barW + dx3d).toFixed(1)},${(by + dy3d).toFixed(1)} ${(bx + barW + dx3d).toFixed(1)},${(floorY + dy3d).toFixed(1)} ${(bx + barW).toFixed(1)},${floorY.toFixed(1)}" fill="${sl.dark}" stroke="#0f172a" stroke-width="1.15" stroke-linejoin="round"/>`;
-
-    // Label persentase di atas batang 3D
-    const labelCenterX = bx + barW / 2 + dx3d * 0.45;
-    const labelY = Math.max(13, by + dy3d - 5);
-    barsSvg += `<text x="${labelCenterX.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="800" fill="#0f172a">${pctRound}%</text>`;
-
-    // Label kategori singkat di bawah sumbu X
-    const shortLbl = sl.shortLabel || sl.label.split('(')[0].trim();
-    barsSvg += `<text x="${(bx + barW / 2).toFixed(1)}" y="${floorY + 16}" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">${escapeAttr(shortLbl)}</text>`;
-  });
-
-  return `
-    <svg viewBox="0 0 ${W} ${H}" class="chart-svg" xmlns="http://www.w3.org/2000/svg">
-      ${gridSvg}
-      ${floorSvg}
-      ${barsSvg}
-    </svg>
-  `;
-}
-
-// 3. Diagram Batang 3D Per Butir Soal PG (Tambahan Detail Nomor 1 - N)
-function buildPG3DBarChartSVG(itemsPG) {
-  if (!itemsPG.length) return `<p style="color:var(--muted);">Belum ada data soal PG.</p>`;
-  const W = 760, H = 260, padL = 44, padR = 26, padT = 26, padB = 40;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
-  const n = itemsPG.length;
-  const slotW = plotW / n;
-  const barW = Math.max(7, Math.min(22, slotW * 0.56));
-  const dx3d = Math.min(7, barW * 0.42);
-  const dy3d = -Math.min(6, barW * 0.36);
-
-  let gridLines = '';
-  [0, 25, 50, 75, 100].forEach(pct => {
-    const y = padT + plotH - (pct / 100) * plotH;
-    gridLines += `
-      <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e2e8f0" stroke-width="1" />
-      <text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#64748b">${pct}%</text>
-    `;
-  });
-
-  let bars = '';
-  itemsPG.forEach((it, idx) => {
-    const pct = Math.round(it.tk * 100);
-    const bh = Math.max(2, (pct / 100) * plotH);
-    const bx = padL + idx * slotW + (slotW - barW) / 2;
-    const by = padT + plotH - bh;
-
-    let cFront = '#2563eb', cTop = '#60a5fa', cSide = '#1d4ed8';
-    if (it.katTK === 'Mudah') { cFront = '#16a34a'; cTop = '#4ade80'; cSide = '#15803d'; }
-    else if (it.katTK === 'Sukar') { cFront = '#dc2626'; cTop = '#f87171'; cSide = '#991b1b'; }
-
-    bars += `<rect x="${bx}" y="${by}" width="${barW}" height="${bh}" fill="${cFront}" stroke="#0f172a" stroke-width="0.7" />`;
-    bars += `<polygon points="${bx},${by} ${bx + dx3d},${by + dy3d} ${bx + barW + dx3d},${by + dy3d} ${bx + barW},${by}" fill="${cTop}" stroke="#0f172a" stroke-width="0.7" />`;
-    bars += `<polygon points="${bx + barW},${by} ${bx + barW + dx3d},${by + dy3d} ${bx + barW + dx3d},${by + bh + dy3d} ${bx + barW},${by + bh}" fill="${cSide}" stroke="#0f172a" stroke-width="0.7" />`;
-
-    if (n <= 25) {
-      bars += `<text x="${bx + barW / 2 + dx3d / 2}" y="${by + dy3d - 3}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#0f172a">${pct}%</text>`;
+    for (let u = 0; u < kUR; u++) {
+      const maxS = state.config.maxUR[u] || 4;
+      const val = st.ur && st.ur[u] !== undefined ? st.ur[u] : 0;
+      cellsHtml += `
+        <td style="text-align:center;">
+          <input type="number" min="0" max="${maxS}" step="0.5" value="${val}"
+            onchange="state.students[${idx}].ur[${u}]=parseFloat(this.value)||0; saveState(true);"
+            style="width:52px; padding:4px; text-align:center;" />
+        </td>
+      `;
     }
-    bars += `<text x="${bx + barW / 2}" y="${padT + plotH + 15}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#334155">${it.no}</text>`;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = cellsHtml;
+    tbody.appendChild(tr);
   });
 
-  return `
-    <svg viewBox="0 0 ${W} ${H}" class="chart-svg" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="${padL},${padT + plotH} ${padL + 10},${padT + plotH - 8} ${W - padR + 10},${padT + plotH - 8} ${W - padR},${padT + plotH}" fill="#cbd5e1" />
-      ${gridLines}
-      ${bars}
-      <text x="${W / 2}" y="${H - 5}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#475569">Nomor Butir Soal Pilihan Ganda (Hijau: Mudah | Biru: Sedang | Merah: Sukar)</text>
-    </svg>
-  `;
+  updateInputJawabanWarningBanner();
 }
 
-// Helper: Membangun 1 Kartu Diagram Lengkap (Judul + Grafik 3D + Tabel Legenda Bawah ala Diagram KAU.pdf)
-function buildKAUChartCard(cardTitle, slices, chartMode, uid, centerTitle = '') {
-  const total = slices.reduce((s, x) => s + x.value, 0);
-  let chartGraphic = '';
-  if (chartMode === 'bar3d') {
-    chartGraphic = build3DBarCategorySVG(slices, uid);
-  } else if (chartMode === 'pie3d') {
-    chartGraphic = build3DPieOrDonutSVG(slices, uid, false, '');
-  } else {
-    chartGraphic = build3DPieOrDonutSVG(slices, uid, true, centerTitle);
+// ==================== DIAGRAM 3D KUALITAS BUTIR SOAL (GAYA DIAGRAM KAU.PDF) ====================
+const CHART_3D_COLORS = {
+  tk: {
+    mudah:  { top: '#86efac', front: '#22c55e', side: '#15803d' },
+    sedang: { top: '#fde047', front: '#facc15', side: '#ca8a04' },
+    sukar:  { top: '#fca5a5', front: '#ef4444', side: '#b91c1c' }
+  },
+  dp: {
+    baik:       { top: '#93c5fd', front: '#3b82f6', side: '#1d4ed8' },
+    perluPerb:  { top: '#a5f3fc', front: '#06b6d4', side: '#0e7490' },
+    diperbaiki: { top: '#fed7aa', front: '#fb923c', side: '#c2410c' },
+    dibuang:    { top: '#f5d0fe', front: '#d946ef', side: '#86198f' }
+  },
+  val: {
+    valid:      { top: '#86efac', front: '#22c55e', side: '#15803d' },
+    tidakValid: { top: '#fda4af', front: '#f43f5e', side: '#be123c' }
+  },
+  bank: {
+    diterima:        { top: '#5eead4', front: '#14b8a6', side: '#0f766e' },
+    dipertimbangkan: { top: '#fcd34d', front: '#f59e0b', side: '#b45309' },
+    ditolak:         { top: '#cbd5e1', front: '#64748b', side: '#334155' }
   }
+};
 
-  const legendRows = slices.map(sl => {
-    const pct = total > 0 ? Math.round((sl.value / total) * 100) : 0;
+function renderChartCardWithLegend(title, svgInner, categories, total) {
+  const legendRows = categories.map(c => {
+    const pct = total > 0 ? Math.round((c.val / total) * 100) : 0;
     return `
       <div class="chart-legend-row">
-        <div class="chart-legend-left">
-          <span class="chart-swatch" style="background:${sl.color};"></span>
-          <span>${escapeAttr(sl.label)}</span>
-        </div>
-        <div class="chart-legend-val">${sl.value} (${pct}%)</div>
+        <span class="chart-legend-left">
+          <span class="chart-swatch" style="background:${c.color.front};"></span>
+          <span>${c.label}</span>
+        </span>
+        <span class="chart-legend-val">${c.val} soal (${pct}%)</span>
       </div>
     `;
   }).join('');
 
   return `
     <div class="chart-card">
-      <div>
-        <h3>${escapeAttr(cardTitle)}</h3>
-        ${chartGraphic}
-      </div>
+      <h3>${title}</h3>
+      ${svgInner}
       <div class="chart-legend-list">
         ${legendRows}
       </div>
@@ -4838,324 +4788,580 @@ function buildKAUChartCard(cardTitle, slices, chartMode, uid, centerTitle = '') 
   `;
 }
 
-// Helper: Membangun 4 Panel Analisis KAU (Kesukaran, Daya Beda, Validitas, Prestasi Belajar Siswa)
-function renderFourPanelAnalysisReport(a, options) {
-  const m = state.meta;
-  const {
-    chartMode,        // 'bar3d' (PG) | 'pie3d' (BS) | 'donut3d' (UR)
-    bannerLabel,      // e.g. 'DIAGRAM ANALISIS SOAL PILIHAN GANDA (BATANG 3D)'
-    soalSuffix,       // e.g. 'PG' | 'B-S' | 'URAIAN'
-    prestasiSuffix,   // e.g. 'PG' | 'BENAR - SALAH' | 'URAIAN'
-    itemsList,        // a.itemsPG | a.itemsBS | a.itemsUR
-    studentScores,    // array of student percentage scores (0..100)
-    prefixUid,
-    extraBottomHtml = ''
-  } = options;
+// 1. Grafik Batang 3D (Khusus Pilihan Ganda)
+function render3DBarChartCard(title, categories, total) {
+  const W = 420, H = 250;
+  const padL = 44, padR = 26, padT = 24, padB = 34;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const depthX = 12, depthY = 9;
+  const maxVal = Math.max(4, Math.ceil(Math.max(...categories.map(c => c.val), 1) * 1.18));
+  const step = Math.max(1, Math.ceil(maxVal / 5));
+  const yCeiling = step * 5;
 
-  const totalSoal = itemsList.length;
-  const totalSiswa = a.N;
-  const kktp = a.kktp;
-  const batasSangatBaik = Math.min(95, Math.max(85, kktp + 10));
+  let gridLines = '';
+  for (let v = 0; v <= yCeiling; v += step) {
+    const y = padT + plotH - (v / yCeiling) * plotH;
+    gridLines += `
+      <line x1="${padL}" y1="${y.toFixed(1)}" x2="${padL + depthX}" y2="${(y - depthY).toFixed(1)}" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="${padL + depthX}" y1="${(y - depthY).toFixed(1)}" x2="${W - padR + depthX}" y2="${(y - depthY).toFixed(1)}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,2"/>
+      <text x="${padL - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="11" font-weight="600" fill="#475569">${v}</text>
+    `;
+  }
 
-  // 1. Kesukaran Soal
-  const tkSlices = [
-    { label: 'Mudah (≥ 0.71)', shortLabel: 'Mudah', value: itemsList.filter(x => x.katTK === 'Mudah').length, color: '#3b82f6', light: '#60a5fa', dark: '#1d4ed8' },
-    { label: 'Sedang (0.31-0.70)', shortLabel: 'Sedang', value: itemsList.filter(x => x.katTK === 'Sedang').length, color: '#22a559', light: '#4ade80', dark: '#15803d' },
-    { label: 'Sukar (< 0.31)', shortLabel: 'Sukar', value: itemsList.filter(x => x.katTK === 'Sukar').length, color: '#ef4444', light: '#f87171', dark: '#b91c1c' }
-  ];
+  const slotW = plotW / categories.length;
+  const barW = Math.min(48, slotW * 0.56);
+  let bars = '';
+  categories.forEach((c, i) => {
+    const x = padL + i * slotW + (slotW - barW) / 2;
+    const bh = (c.val / yCeiling) * plotH;
+    const y = padT + plotH - bh;
+    const pct = total > 0 ? Math.round((c.val / total) * 100) : 0;
 
-  // 2. Daya Beda Soal (4 Kategori persis seperti Diagram KAU.pdf)
-  const dpSlices = [
-    { label: 'Sangat Baik', shortLabel: 'Sangat Baik', value: itemsList.filter(x => x.dp >= 0.4).length, color: '#4775b3', light: '#6c96cf', dark: '#2c4d7a' },
-    { label: 'Baik', shortLabel: 'Baik', value: itemsList.filter(x => x.dp >= 0.3 && x.dp < 0.4).length, color: '#0ea5e9', light: '#38bdf8', dark: '#0369a1' },
-    { label: 'Cukup', shortLabel: 'Cukup', value: itemsList.filter(x => x.dp >= 0.2 && x.dp < 0.3).length, color: '#f59e0b', light: '#fbbf24', dark: '#b45309' },
-    { label: 'Jelek', shortLabel: 'Jelek', value: itemsList.filter(x => x.dp < 0.2).length, color: '#ef4444', light: '#f87171', dark: '#b91c1c' }
-  ];
+    if (bh > 0.5) {
+      bars += `
+        <polygon points="${x},${y} ${x + depthX},${y - depthY} ${x + barW + depthX},${y - depthY} ${x + barW},${y}" fill="${c.color.top}" stroke="#0f172a" stroke-width="1"/>
+        <polygon points="${x + barW},${y} ${x + barW + depthX},${y - depthY} ${x + barW + depthX},${y + bh - depthY} ${x + barW},${y + bh}" fill="${c.color.side}" stroke="#0f172a" stroke-width="1"/>
+        <rect x="${x}" y="${y}" width="${barW}" height="${bh}" fill="${c.color.front}" stroke="#0f172a" stroke-width="1.1"/>
+      `;
+    } else {
+      bars += `<rect x="${x}" y="${padT + plotH - 2}" width="${barW}" height="2" fill="${c.color.side}"/>`;
+    }
+    bars += `
+      <text x="${x + barW / 2 + depthX / 2}" y="${Math.max(14, y - depthY - 5)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#0f172a">${c.val} (${pct}%)</text>
+      <text x="${x + barW / 2}" y="${padT + plotH + 17}" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">${c.shortLabel || c.label.split(' ')[0]}</text>
+    `;
+  });
 
-  // 3. Validitas Soal
-  const valSlices = [
-    { label: 'Valid (r_xy > r_tabel)', shortLabel: 'Valid', value: itemsList.filter(x => x.valid === 'Valid').length, color: '#1e6b8c', light: '#3b8eb0', dark: '#13485e' },
-    { label: 'Tidak Valid', shortLabel: 'Tidak Valid', value: itemsList.filter(x => x.valid !== 'Valid').length, color: '#f97316', light: '#fb923c', dark: '#c2410c' }
-  ];
-
-  // 4. Prestasi Belajar Siswa
-  const sangatBaikCnt = studentScores.filter(v => v >= batasSangatBaik).length;
-  const baikCnt = studentScores.filter(v => v >= (kktp - 0.5) && v < batasSangatBaik).length;
-  const kurangCnt = studentScores.filter(v => v < (kktp - 0.5)).length;
-  const presSlices = [
-    { label: 'Sangat Baik', shortLabel: 'Sangat Baik', value: sangatBaikCnt, color: '#6d28d9', light: '#8b5cf6', dark: '#4c1d95' },
-    { label: 'Baik', shortLabel: 'Baik', value: baikCnt, color: '#10b981', light: '#34d399', dark: '#047857' },
-    { label: 'Kurang', shortLabel: 'Kurang', value: kurangCnt, color: '#dc2626', light: '#f87171', dark: '#991b1b' }
-  ];
-
-  return `
-    <div class="kau-diagram-header">
-      <div class="main-title">${escapeAttr(m.jenisTes)} ${escapeAttr(m.sekolah).toUpperCase()}</div>
-      <div class="sub-meta">Mapel: <b>${escapeAttr(m.mapel)}</b> &nbsp; Kelas: <b>${escapeAttr(m.kelas)}</b> | Materi: <b>${escapeAttr(m.materi)}</b> | KKTP: <b>${m.kktp}</b></div>
-      <div class="chart-type-title">${escapeAttr(bannerLabel)}</div>
-    </div>
-    <div class="charts-grid-2x2">
-      ${buildKAUChartCard(`DIAGRAM KESUKARAN SOAL ${soalSuffix}`, tkSlices, chartMode, `${prefixUid}_tk`, `SOAL: ${totalSoal}`)}
-      ${buildKAUChartCard(`DIAGRAM DAYA BEDA SOAL ${soalSuffix}`, dpSlices, chartMode, `${prefixUid}_dp`, `SOAL: ${totalSoal}`)}
-      ${buildKAUChartCard(`DIAGRAM VALIDITAS SOAL ${soalSuffix}`, valSlices, chartMode, `${prefixUid}_val`, `SOAL: ${totalSoal}`)}
-      ${buildKAUChartCard(`PRESTASI BELAJAR SISWA (${prestasiSuffix})`, presSlices, chartMode, `${prefixUid}_pres`, `SISWA: ${totalSiswa}`)}
-    </div>
-    ${renderSignatureBlockHTML()}
-    ${extraBottomHtml}
+  const svg = `
+    <svg class="chart-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="${padL},${padT} ${padL + depthX},${padT - depthY} ${W - padR + depthX},${padT - depthY} ${W - padR},${padT}" fill="#f8fafc"/>
+      <polygon points="${padL},${padT + plotH} ${padL + depthX},${padT + plotH - depthY} ${W - padR + depthX},${padT + plotH - depthY} ${W - padR},${padT + plotH}" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+      ${gridLines}
+      <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" stroke="#334155" stroke-width="1.5"/>
+      <line x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}" stroke="#334155" stroke-width="1.5"/>
+      ${bars}
+    </svg>
   `;
+  return renderChartCardWithLegend(title, svg, categories, total);
 }
 
-// ==================== RENDER LAPORAN & GRAFIK (TERMASUK LEGER & REKAP ANTAR KELAS) ====================
-function renderSignatureBlockHTML() {
+// 2. Grafik Pie / Lingkaran 3D (Khusus Benar-Salah)
+function render3DPieChartCard(title, categories, total) {
+  const W = 420, H = 235;
+  const cx = W / 2, cy = 104;
+  const rx = 118, ry = 66, depth = 22;
+
+  const nonZero = categories.filter(c => c.val > 0);
+  let slicesSvg = '';
+
+  if (total <= 0 || nonZero.length === 0) {
+    slicesSvg = `
+      <ellipse cx="${cx}" cy="${cy + depth}" rx="${rx}" ry="${ry}" fill="#cbd5e1" stroke="#0f172a" stroke-width="1.2"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#e2e8f0" stroke="#0f172a" stroke-width="1.2"/>
+      <text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="#475569">Belum Ada Data</text>
+    `;
+  } else if (nonZero.length === 1) {
+    const c = nonZero[0];
+    slicesSvg = `
+      <path d="M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} L ${cx + rx} ${cy + depth} A ${rx} ${ry} 0 1 1 ${cx - rx} ${cy + depth} Z"
+            fill="${c.color.side}" stroke="#0f172a" stroke-width="1.2"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${c.color.front}" stroke="#0f172a" stroke-width="1.2"/>
+      <rect x="${cx - 32}" y="${cy - 11}" width="64" height="20" rx="4" fill="#ffffff" fill-opacity="0.92" stroke="#cbd5e1" stroke-width="0.8"/>
+      <text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="11" font-weight="800" fill="#0f172a">${c.val} (100%)</text>
+    `;
+  } else {
+    let curAngle = -Math.PI / 2;
+    const slices = nonZero.map(c => {
+      const sweep = (c.val / total) * Math.PI * 2;
+      const s = { ...c, a0: curAngle, a1: curAngle + sweep, mid: curAngle + sweep / 2 };
+      curAngle += sweep;
+      return s;
+    });
+
+    slices.forEach(s => {
+      const steps = Math.max(8, Math.ceil((s.a1 - s.a0) / 0.14));
+      const dAng = (s.a1 - s.a0) / steps;
+      for (let k = 0; k < steps; k++) {
+        const t0 = s.a0 + k * dAng;
+        const t1 = t0 + dAng;
+        const tMid = (t0 + t1) / 2;
+        if (Math.sin(tMid) >= -0.05) {
+          const x0 = cx + rx * Math.cos(t0), y0 = cy + ry * Math.sin(t0);
+          const x1 = cx + rx * Math.cos(t1), y1 = cy + ry * Math.sin(t1);
+          slicesSvg += `
+            <path d="M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${rx} ${ry} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x1.toFixed(1)} ${(y1 + depth).toFixed(1)} A ${rx} ${ry} 0 0 0 ${x0.toFixed(1)} ${(y0 + depth).toFixed(1)} Z"
+                  fill="${s.color.side}" stroke="${s.color.side}" stroke-width="0.6"/>
+          `;
+        }
+      }
+    });
+
+    slices.forEach(s => {
+      const x0 = cx + rx * Math.cos(s.a0), y0 = cy + ry * Math.sin(s.a0);
+      const x1 = cx + rx * Math.cos(s.a1), y1 = cy + ry * Math.sin(s.a1);
+      const largeArc = (s.a1 - s.a0) > Math.PI ? 1 : 0;
+      slicesSvg += `
+        <path d="M ${cx} ${cy} L ${x0.toFixed(1)} ${y0.toFixed(1)} A ${rx} ${ry} 0 ${largeArc} 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z"
+              fill="${s.color.front}" stroke="#0f172a" stroke-width="1.2"/>
+      `;
+    });
+
+    slices.forEach(s => {
+      const pct = Math.round((s.val / total) * 100);
+      if (pct >= 5) {
+        const lx = cx + rx * 0.62 * Math.cos(s.mid);
+        const ly = cy + ry * 0.62 * Math.sin(s.mid);
+        slicesSvg += `
+          <rect x="${(lx - 26).toFixed(1)}" y="${(ly - 9).toFixed(1)}" width="52" height="17" rx="4" fill="#ffffff" fill-opacity="0.92" stroke="#94a3b8" stroke-width="0.7"/>
+          <text x="${lx.toFixed(1)}" y="${(ly + 3).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="800" fill="#0f172a">${s.val} (${pct}%)</text>
+        `;
+      }
+    });
+  }
+
+  const svg = `
+    <svg class="chart-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="${cx}" cy="${cy + depth + 6}" rx="${rx + 4}" ry="${ry + 3}" fill="#e2e8f0" opacity="0.6"/>
+      ${slicesSvg}
+    </svg>
+  `;
+  return renderChartCardWithLegend(title, svg, categories, total);
+}
+
+// 3. Grafik Donat 3D (Khusus Soal Uraian — Identik dengan Diagram KAU.pdf)
+function render3DDonutChartCard(title, categories, total, centerSubLabel = 'Soal Uraian') {
+  const W = 420, H = 235;
+  const cx = W / 2, cy = 104;
+  const rxOut = 118, ryOut = 66;
+  const rxIn = 56, ryIn = 31;
+  const depth = 22;
+
+  const nonZero = categories.filter(c => c.val > 0);
+  let donutSvg = '';
+
+  const donutTopPath = (a0, a1) => {
+    const largeArc = (a1 - a0) > Math.PI ? 1 : 0;
+    const ox0 = cx + rxOut * Math.cos(a0), oy0 = cy + ryOut * Math.sin(a0);
+    const ox1 = cx + rxOut * Math.cos(a1), oy1 = cy + ryOut * Math.sin(a1);
+    const ix1 = cx + rxIn * Math.cos(a1), iy1 = cy + ryIn * Math.sin(a1);
+    const ix0 = cx + rxIn * Math.cos(a0), iy0 = cy + ryIn * Math.sin(a0);
+    return `M ${ox0.toFixed(1)} ${oy0.toFixed(1)} A ${rxOut} ${ryOut} 0 ${largeArc} 1 ${ox1.toFixed(1)} ${oy1.toFixed(1)} L ${ix1.toFixed(1)} ${iy1.toFixed(1)} A ${rxIn} ${ryIn} 0 ${largeArc} 0 ${ix0.toFixed(1)} ${iy0.toFixed(1)} Z`;
+  };
+
+  if (total <= 0 || nonZero.length === 0) {
+    donutSvg = `
+      <ellipse cx="${cx}" cy="${cy + depth}" rx="${rxOut}" ry="${ryOut}" fill="#cbd5e1" stroke="#0f172a" stroke-width="1.2"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rxOut}" ry="${ryOut}" fill="#e2e8f0" stroke="#0f172a" stroke-width="1.2"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rxIn}" ry="${ryIn}" fill="#ffffff" stroke="#0f172a" stroke-width="1.2"/>
+    `;
+  } else if (nonZero.length === 1) {
+    const c = nonZero[0];
+    donutSvg = `
+      <path d="M ${cx - rxOut} ${cy} A ${rxOut} ${ryOut} 0 1 0 ${cx + rxOut} ${cy} L ${cx + rxOut} ${cy + depth} A ${rxOut} ${ryOut} 0 1 1 ${cx - rxOut} ${cy + depth} Z"
+            fill="${c.color.side}" stroke="#0f172a" stroke-width="1.2"/>
+      <path d="M ${cx - rxIn} ${cy} A ${rxIn} ${ryIn} 0 0 1 ${cx + rxIn} ${cy} L ${cx + rxIn} ${cy + depth} A ${rxIn} ${ryIn} 0 0 0 ${cx - rxIn} ${cy + depth} Z"
+            fill="${c.color.side}" stroke="#0f172a" stroke-width="1"/>
+      <path d="M ${cx - rxOut} ${cy} A ${rxOut} ${ryOut} 0 1 1 ${cx + rxOut} ${cy} A ${rxOut} ${ryOut} 0 1 1 ${cx - rxOut} ${cy} Z
+               M ${cx - rxIn} ${cy} A ${rxIn} ${ryIn} 0 1 0 ${cx + rxIn} ${cy} A ${rxIn} ${ryIn} 0 1 0 ${cx - rxIn} ${cy} Z"
+            fill="${c.color.front}" fill-rule="evenodd" stroke="#0f172a" stroke-width="1.2"/>
+      <rect x="${cx - 32}" y="${cy - ryOut + 6}" width="64" height="18" rx="4" fill="#ffffff" fill-opacity="0.93" stroke="#94a3b8" stroke-width="0.7"/>
+      <text x="${cx}" y="${cy - ryOut + 18}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#0f172a">${c.val} (100%)</text>
+    `;
+  } else {
+    let curAngle = -Math.PI / 2;
+    const slices = nonZero.map(c => {
+      const sweep = (c.val / total) * Math.PI * 2;
+      const s = { ...c, a0: curAngle, a1: curAngle + sweep, mid: curAngle + sweep / 2 };
+      curAngle += sweep;
+      return s;
+    });
+
+    slices.forEach(s => {
+      const steps = Math.max(8, Math.ceil((s.a1 - s.a0) / 0.14));
+      const dAng = (s.a1 - s.a0) / steps;
+      for (let k = 0; k < steps; k++) {
+        const t0 = s.a0 + k * dAng;
+        const t1 = t0 + dAng;
+        const tMid = (t0 + t1) / 2;
+        if (Math.sin(tMid) < 0) {
+          const x0 = cx + rxIn * Math.cos(t0), y0 = cy + ryIn * Math.sin(t0);
+          const x1 = cx + rxIn * Math.cos(t1), y1 = cy + ryIn * Math.sin(t1);
+          donutSvg += `
+            <path d="M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${rxIn} ${ryIn} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x1.toFixed(1)} ${(y1 + depth).toFixed(1)} A ${rxIn} ${ryIn} 0 0 0 ${x0.toFixed(1)} ${(y0 + depth).toFixed(1)} Z"
+                  fill="${s.color.side}" stroke="${s.color.side}" stroke-width="0.6"/>
+          `;
+        }
+      }
+    });
+
+    slices.forEach(s => {
+      const steps = Math.max(8, Math.ceil((s.a1 - s.a0) / 0.14));
+      const dAng = (s.a1 - s.a0) / steps;
+      for (let k = 0; k < steps; k++) {
+        const t0 = s.a0 + k * dAng;
+        const t1 = t0 + dAng;
+        const tMid = (t0 + t1) / 2;
+        if (Math.sin(tMid) >= -0.05) {
+          const x0 = cx + rxOut * Math.cos(t0), y0 = cy + ryOut * Math.sin(t0);
+          const x1 = cx + rxOut * Math.cos(t1), y1 = cy + ryOut * Math.sin(t1);
+          donutSvg += `
+            <path d="M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${rxOut} ${ryOut} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x1.toFixed(1)} ${(y1 + depth).toFixed(1)} A ${rxOut} ${ryOut} 0 0 0 ${x0.toFixed(1)} ${(y0 + depth).toFixed(1)} Z"
+                  fill="${s.color.side}" stroke="${s.color.side}" stroke-width="0.6"/>
+          `;
+        }
+      }
+    });
+
+    slices.forEach(s => {
+      donutSvg += `<path d="${donutTopPath(s.a0, s.a1)}" fill="${s.color.front}" stroke="#0f172a" stroke-width="1.2"/>`;
+    });
+
+    slices.forEach(s => {
+      const pct = Math.round((s.val / total) * 100);
+      if (pct >= 5) {
+        const rMidX = (rxOut + rxIn) * 0.52;
+        const rMidY = (ryOut + ryIn) * 0.52;
+        const lx = cx + rMidX * Math.cos(s.mid);
+        const ly = cy + rMidY * Math.sin(s.mid);
+        donutSvg += `
+          <rect x="${(lx - 26).toFixed(1)}" y="${(ly - 9).toFixed(1)}" width="52" height="17" rx="4" fill="#ffffff" fill-opacity="0.93" stroke="#94a3b8" stroke-width="0.7"/>
+          <text x="${lx.toFixed(1)}" y="${(ly + 3).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="800" fill="#0f172a">${s.val} (${pct}%)</text>
+        `;
+      }
+    });
+  }
+
+  const svg = `
+    <svg class="chart-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="${cx}" cy="${cy + depth + 6}" rx="${rxOut + 4}" ry="${ryOut + 3}" fill="#e2e8f0" opacity="0.6"/>
+      ${donutSvg}
+      <text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="18" font-weight="800" fill="#1e3a8a">${total}</text>
+      <text x="${cx}" y="${cy + 13}" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">${centerSubLabel}</text>
+    </svg>
+  `;
+  return renderChartCardWithLegend(title, svg, categories, total);
+}
+
+function buildQualityChartSuiteHTML(items, chartStyle, sectionTitle, centerSubLabel) {
+  const total = items.length;
+  const mudah = items.filter(x => x.katTK === 'Mudah').length;
+  const sedang = items.filter(x => x.katTK === 'Sedang').length;
+  const sukar = items.filter(x => x.katTK === 'Sukar').length;
+
+  const dpBaik = items.filter(x => x.katDP === 'Soal diterima baik').length;
+  const dpPerlu = items.filter(x => x.katDP === 'Soal diterima tapi perlu diperbaiki').length;
+  const dpPerb = items.filter(x => x.katDP === 'Soal diperbaiki').length;
+  const dpBuang = items.filter(x => x.katDP === 'Soal tidak dipakai/dibuang').length;
+
+  const valid = items.filter(x => x.valid === 'Valid').length;
+  const tdkValid = items.filter(x => x.valid !== 'Valid').length;
+
+  const diterima = items.filter(x => x.bankSoal === 'Diterima').length;
+  const dipertimbangkan = items.filter(x => x.bankSoal === 'Dipertimbangkan').length;
+  const ditolak = items.filter(x => x.bankSoal === 'Ditolak').length;
+
+  const catTK = [
+    { label: 'Mudah (0.71 - 1.00)', shortLabel: 'Mudah', val: mudah, color: CHART_3D_COLORS.tk.mudah },
+    { label: 'Sedang (0.31 - 0.70)', shortLabel: 'Sedang', val: sedang, color: CHART_3D_COLORS.tk.sedang },
+    { label: 'Sukar (0.00 - 0.30)', shortLabel: 'Sukar', val: sukar, color: CHART_3D_COLORS.tk.sukar }
+  ];
+  const catDP = [
+    { label: 'Diterima Baik (>= 0.40)', shortLabel: 'Baik', val: dpBaik, color: CHART_3D_COLORS.dp.baik },
+    { label: 'Perlu Perbaikan (0.30 - 0.39)', shortLabel: 'Perlu Perb.', val: dpPerlu, color: CHART_3D_COLORS.dp.perluPerb },
+    { label: 'Diperbaiki (0.20 - 0.29)', shortLabel: 'Diperbaiki', val: dpPerb, color: CHART_3D_COLORS.dp.diperbaiki },
+    { label: 'Dibuang (< 0.20)', shortLabel: 'Dibuang', val: dpBuang, color: CHART_3D_COLORS.dp.dibuang }
+  ];
+  const catVal = [
+    { label: 'Valid (rxy > r tabel)', shortLabel: 'Valid', val: valid, color: CHART_3D_COLORS.val.valid },
+    { label: 'Tidak Valid (rxy <= r tabel)', shortLabel: 'Tdk Valid', val: tdkValid, color: CHART_3D_COLORS.val.tidakValid }
+  ];
+  const catBank = [
+    { label: 'Diterima', shortLabel: 'Diterima', val: diterima, color: CHART_3D_COLORS.bank.diterima },
+    { label: 'Dipertimbangkan', shortLabel: 'Dipertimb.', val: dipertimbangkan, color: CHART_3D_COLORS.bank.dipertimbangkan },
+    { label: 'Ditolak', shortLabel: 'Ditolak', val: ditolak, color: CHART_3D_COLORS.bank.ditolak }
+  ];
+
+  const renderCard = chartStyle === 'bar3d'
+    ? (t, cats) => render3DBarChartCard(t, cats, total)
+    : (chartStyle === 'pie3d'
+      ? (t, cats) => render3DPieChartCard(t, cats, total)
+      : (t, cats) => render3DDonutChartCard(t, cats, total, centerSubLabel));
+
   const m = state.meta;
-  return `
+  const headerHtml = `
+    <div class="kau-diagram-header">
+      <div class="main-title">GRAFIK ANALISIS KUALITAS BUTIR SOAL - ${escapeAttr(m.sekolah)}</div>
+      <div class="sub-meta">Mata Pelajaran: <b>${escapeAttr(m.mapel)}</b> | Kelas: <b>${escapeAttr(m.kelas)}</b> | Tapel: <b>${escapeAttr(m.tapel)}</b> | Jumlah Peserta: <b>${state.students.length} Siswa</b></div>
+      <div class="chart-type-title">${sectionTitle}</div>
+    </div>
+  `;
+
+  const gridHtml = `
+    <div class="charts-grid-2x2">
+      ${renderCard('TINGKAT KESUKARAN SOAL', catTK)}
+      ${renderCard('DAYA PEMBEDA SOAL', catDP)}
+      ${renderCard('VALIDITAS BUTIR SOAL', catVal)}
+      ${renderCard('STATUS BANK SOAL', catBank)}
+    </div>
+  `;
+
+  const sigHtml = `
     <div class="signature-block">
       <div class="signature-col">
         <div>Mengetahui,</div>
-        <div>Kepala ${escapeAttr(m.sekolah)}</div>
+        <div>Kepala Sekolah</div>
         <div class="signature-space"></div>
-        <div><b>${escapeAttr(m.kepsek)}</b></div>
+        <div><b><u>${escapeAttr(m.kepsek)}</u></b></div>
         <div>NIP. ${escapeAttr(m.nipKepsek)}</div>
       </div>
       <div class="signature-col">
         <div>${escapeAttr(m.tempat)}, ${escapeAttr(m.tglPeriksa)}</div>
-        <div>Guru Mata Pelajaran ${escapeAttr(m.mapel)}</div>
+        <div>Guru Mata Pelajaran</div>
         <div class="signature-space"></div>
-        <div><b>${escapeAttr(m.guru)}</b></div>
+        <div><b><u>${escapeAttr(m.guru)}</u></b></div>
         <div>NIP. ${escapeAttr(m.nipGuru)}</div>
       </div>
     </div>
   `;
+
+  return headerHtml + gridHtml + sigHtml;
 }
 
-function buildReportHTML(tabKey) {
-  const a = computeAllAnalytics();
+// ==================== RENDER LAPORAN & ANALISIS KAU ====================
+function switchTab(tabId, btnEl) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  if (btnEl) btnEl.classList.add('active');
+  if (tabId === 'ljk') renderLJKPreview();
+  if (tabId === 'input') renderInputJawabanTable();
+  if (tabId === 'laporan') renderReport();
+  if (tabId === 'scan' && !loadedScanImage) drawScannerIdleCanvas();
+}
+
+function switchReport(repId, btnEl) {
+  currentReportTab = repId;
+  document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  renderReport();
+}
+
+function buildReportHTML(repId) {
+  const res = computeAllAnalytics();
   const m = state.meta;
-  const headerInfo = `
+  const headerKop = `
     <div style="text-align:center; margin-bottom:10px; border-bottom:2px solid #1e3a8a; padding-bottom:6px;">
-      <div style="font-weight:800; font-size:0.95rem; color:#1e3a8a;">${escapeAttr(m.jenisTes)} • ${escapeAttr(m.sekolah).toUpperCase()}</div>
-      <div style="font-size:0.78rem; color:#334155;">Mapel: <b>${escapeAttr(m.mapel)}</b> | Kelas: <b>${escapeAttr(m.kelas)}</b> | Materi: <b>${escapeAttr(m.materi)}</b> | KKTP: <b>${m.kktp}</b></div>
+      <div style="font-weight:800; font-size:0.95rem; color:#1e3a8a;">${m.jenisTes} — ${m.sekolah.toUpperCase()}</div>
+      <div style="font-size:0.78rem; color:#334155;">Mapel: <b>${m.mapel}</b> | Kelas: <b>${m.kelas}</b> | Materi: <b>${m.materi}</b> | KKTP: <b>${m.kktp}</b> | Tapel: <b>${m.tapel}</b></div>
+    </div>
+  `;
+  const ttdFooter = `
+    <div style="display:flex; justify-content:space-between; margin-top:16px; font-size:0.78rem; break-inside:avoid;">
+      <div>Mengetahui,<br>Kepala Sekolah<br><br><br><b>${m.kepsek}</b><br>NIP. ${m.nipKepsek}</div>
+      <div>${m.tempat}, ${m.tglPeriksa}<br>Guru Mata Pelajaran<br><br><br><b>${m.guru}</b><br>NIP. ${m.nipGuru}</div>
     </div>
   `;
 
-  if (tabKey === 'nilai_mc') {
-    const tuntasCount = a.objMatrix.filter(p => p.tuntas === 'Tuntas').length;
-    const avg = a.N > 0 ? a.objMatrix.reduce((s, p) => s + p.nilai, 0) / a.N : 0;
+  if (repId === 'nilai_mc') {
+    const tuntasCount = res.objMatrix.filter(p => p.tuntas === 'Tuntas').length;
+    const avgNilai = res.N > 0 ? (res.objMatrix.reduce((s, p) => s + p.nilai, 0) / res.N).toFixed(2) : '0.00';
     return `
-      ${headerInfo}
-      <h3>DAFTAR NILAI OBJEKTIF (${a.kPG} PG${a.kBS ? ' + ' + a.kBS + ' B-S' : ''})</h3>
+      ${headerKop}
+      <h2>DAFTAR NILAI OBJEKTIF (${res.kPG} PG${res.kBS ? ` + ${res.kBS} B-S` : ''}) (Sheet: NILAI MC)</h2>
       <div class="grid-3" style="margin-bottom:10px;">
-        <div class="stat-box"><div class="num">${avg.toFixed(1)}</div><div class="lbl">Rata-rata Kelas</div></div>
-        <div class="stat-box"><div class="num" style="color:#059669;">${tuntasCount} / ${a.N}</div><div class="lbl">Siswa Tuntas</div></div>
-        <div class="stat-box"><div class="num" style="color:#dc2626;">${a.N - tuntasCount}</div><div class="lbl">Perlu Remedial</div></div>
+        <div class="stat-box"><div class="num">${avgNilai}</div><div class="lbl">Rata-rata Kelas</div></div>
+        <div class="stat-box"><div class="num">${tuntasCount} / ${res.N}</div><div class="lbl">Tuntas (&ge; ${res.kktp})</div></div>
+        <div class="stat-box"><div class="num">${res.N > 0 ? ((tuntasCount/res.N)*100).toFixed(0) : 0}%</div><div class="lbl">Ketuntasan Klasikal</div></div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>No</th><th>${getIdFieldLabel()}</th><th>Nama Siswa</th><th>Skor PG</th>${a.kBS ? '<th>Skor B-S</th>' : ''}<th>Nilai</th><th>Keterangan</th></tr></thead>
+          <thead><tr><th>No</th><th>${getIdFieldLabel()}</th><th>Nama Siswa</th><th>Skor PG</th>${res.kBS ? '<th>Skor B-S</th>' : ''}<th>Total Skor</th><th>Nilai</th><th>Keterangan</th></tr></thead>
           <tbody>
             ${state.students.map((st, i) => `
               <tr>
-                <td>${i + 1}</td><td>${escapeAttr(st.nis || '-')}</td><td><b>${escapeAttr(st.nama)}</b></td>
-                <td>${a.pgMatrix[i].skor} / ${a.kPG}</td>
-                ${a.kBS ? `<td>${a.bsMatrix[i].skor} / ${a.kBS}</td>` : ''}
-                <td><b>${a.objMatrix[i].nilai.toFixed(2)}</b></td>
-                <td><span class="badge ${a.objMatrix[i].tuntas === 'Tuntas' ? 'badge-tuntas' : 'badge-remed'}">${a.objMatrix[i].tuntas}</span></td>
+                <td>${i + 1}</td><td>${escapeAttr(st.nis || '-')}</td><td>${escapeAttr(st.nama)}</td>
+                <td>${res.pgMatrix[i].skor} / ${res.kPG}</td>
+                ${res.kBS ? `<td>${res.bsMatrix[i].skor} / ${res.kBS}</td>` : ''}
+                <td>${res.objMatrix[i].skor} / ${res.objMatrix[i].total}</td>
+                <td><b>${res.objMatrix[i].nilai.toFixed(1)}</b></td>
+                <td><span class="badge ${res.objMatrix[i].tuntas === 'Tuntas' ? 'badge-tuntas' : 'badge-remed'}">${res.objMatrix[i].tuntas}</span></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
       </div>
-      ${renderSignatureBlockHTML()}
+      ${ttdFooter}
     `;
   }
 
-  if (tabKey === 'analisis_mc') {
-    return `
-      ${headerInfo}
-      <h3>ANALISIS BUTIR SOAL PILIHAN GANDA & RELIABILITAS (KR-20)</h3>
+  if (repId === 'analisis_mc') {
+    const bsSectionHtml = res.kBS > 0 ? `
+      <h2 style="margin-top:16px;">ANALISIS BUTIR SOAL BENAR-SALAH (${res.kBS} SOAL)</h2>
       <div class="grid-3" style="margin-bottom:10px;">
-        <div class="stat-box"><div class="num">${a.kr20.toFixed(3)}</div><div class="lbl">Reliabilitas (KR-20)</div></div>
-        <div class="stat-box"><div class="num">${a.rTabel.toFixed(3)}</div><div class="lbl">r Tabel (N=${a.N})</div></div>
-        <div class="stat-box"><div class="num" style="color:${a.relStatusPG==='Reliabel'?'#059669':'#dc2626'};">${a.relStatusPG}</div><div class="lbl">Status Tes PG</div></div>
+        <div class="stat-box"><div class="num">${res.rTabel.toFixed(3)}</div><div class="lbl">r Tabel (N=${res.N}, &alpha;=5%)</div></div>
+        <div class="stat-box"><div class="num">${res.kr20BS.toFixed(3)}</div><div class="lbl">Reliabilitas KR-20 (B-S)</div></div>
+        <div class="stat-box"><div class="num">${res.relStatusBS}</div><div class="lbl">Status Reliabilitas B-S</div></div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>No Soal</th><th>TK</th><th>Kategori TK</th><th>Daya Beda</th><th>Kategori DP</th><th>r_xy</th><th>Validitas</th><th>Bank Soal</th></tr></thead>
+          <thead><tr><th>No Soal</th><th>Benar</th><th>Salah</th><th>Kosong</th><th>Ganda</th><th>TK</th><th>Ket. TK</th><th>DP</th><th>Ket. DP</th><th>r hitung</th><th>Validitas</th><th>Bank Soal</th></tr></thead>
           <tbody>
-            ${a.itemsPG.map(it => `
+            ${res.itemsBS.map(it => `
+              <tr>
+                <td><b>${it.no}</b></td>
+                <td>${it.benar}</td><td>${it.salah}</td><td>${it.kosong}</td><td>${it.ganda}</td>
+                <td>${it.tk.toFixed(2)}</td><td>${it.katTK}</td>
+                <td>${it.dp.toFixed(2)}</td><td>${it.katDP}</td>
+                <td>${it.rxy.toFixed(2)}</td>
+                <td><span class="badge ${it.valid === 'Valid' ? 'badge-tuntas' : 'badge-remed'}">${it.valid}</span></td>
+                <td><span class="badge ${it.bankSoal === 'Diterima' ? 'badge-tuntas' : (it.bankSoal === 'Ditolak' ? 'badge-remed' : 'badge-warn')}">${it.bankSoal}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '';
+
+    return `
+      ${headerKop}
+      <h2>ANALISIS BUTIR SOAL PILIHAN GANDA (Sheet: Analisis MC)</h2>
+      <div class="grid-3" style="margin-bottom:10px;">
+        <div class="stat-box"><div class="num">${res.rTabel.toFixed(3)}</div><div class="lbl">r Tabel (N=${res.N}, &alpha;=5%)</div></div>
+        <div class="stat-box"><div class="num">${res.kr20.toFixed(3)}</div><div class="lbl">Reliabilitas KR-20</div></div>
+        <div class="stat-box"><div class="num">${res.relStatusPG}</div><div class="lbl">Status Reliabilitas</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>No Soal</th><th>TK</th><th>Ket. TK</th><th>DP</th><th>Ket. DP</th><th>r hitung</th><th>Validitas</th><th>Bank Soal</th></tr></thead>
+          <tbody>
+            ${res.itemsPG.map(it => `
               <tr>
                 <td><b>${it.no}</b></td>
                 <td>${it.tk.toFixed(2)}</td><td>${it.katTK}</td>
                 <td>${it.dp.toFixed(2)}</td><td>${it.katDP}</td>
-                <td>${it.rxy.toFixed(3)}</td>
+                <td>${it.rxy.toFixed(2)}</td>
                 <td><span class="badge ${it.valid === 'Valid' ? 'badge-tuntas' : 'badge-remed'}">${it.valid}</span></td>
-                <td><b>${it.bankSoal}</b></td>
+                <td><span class="badge ${it.bankSoal === 'Diterima' ? 'badge-tuntas' : (it.bankSoal === 'Ditolak' ? 'badge-remed' : 'badge-warn')}">${it.bankSoal}</span></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
       </div>
-      ${a.kBS > 0 ? `
-        <h3 style="margin-top:16px;">ANALISIS SOAL BENAR - SALAH (${a.kBS} SOAL • KR-20: ${a.kr20BS.toFixed(3)} / ${a.relStatusBS})</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>No</th><th>Benar</th><th>Salah</th><th>Kosong</th><th>TK</th><th>Kategori TK</th><th>Daya Beda</th><th>r_xy</th><th>Validitas</th><th>Bank Soal</th></tr></thead>
-            <tbody>${a.itemsBS.map(it => `<tr><td><b>${it.no}</b></td><td>${it.benar}</td><td>${it.salah}</td><td>${it.kosong}</td><td>${it.tk.toFixed(2)}</td><td>${it.katTK}</td><td>${it.dp.toFixed(2)}</td><td>${it.rxy.toFixed(3)}</td><td><span class="badge ${it.valid === 'Valid' ? 'badge-tuntas' : 'badge-remed'}">${it.valid}</span></td><td><b>${it.bankSoal}</b></td></tr>`).join('')}</tbody>
-          </table>
-        </div>` : ''}
-      ${renderSignatureBlockHTML()}
+      ${bsSectionHtml}
+      ${ttdFooter}
     `;
   }
 
-  // VARIASI 1: PILIHAN GANDA (PG) -> DIAGRAM BATANG 3D
-  if (tabKey === 'grafik_mc') {
-    const pgStudentScores = a.pgMatrix.map(p => p.nilai);
-    const detailBarCard = `
-      <div class="chart-card" style="margin-top:16px;">
-        <h3>TINGKAT PENGUASAAN TIAP BUTIR SOAL PILIHAN GANDA (NO. 1 – ${a.kPG})</h3>
-        ${buildPG3DBarChartSVG(a.itemsPG)}
-      </div>
-    `;
-    return renderFourPanelAnalysisReport(a, {
-      chartMode: 'bar3d',
-      bannerLabel: 'DIAGRAM ANALISIS SOAL PILIHAN GANDA (BATANG 3D)',
-      soalSuffix: 'PG',
-      prestasiSuffix: 'PG',
-      itemsList: a.itemsPG,
-      studentScores: pgStudentScores,
-      prefixUid: 'pg_bar3d',
-      extraBottomHtml: detailBarCard
-    });
+  if (repId === 'grafik_mc') {
+    return buildQualityChartSuiteHTML(
+      res.itemsPG,
+      'bar3d',
+      `SOAL PILIHAN GANDA (DIAGRAM BATANG 3D • ${res.kPG} SOAL)`,
+      'Soal PG'
+    );
   }
 
-  // VARIASI 2: BENAR - SALAH (B-S) -> DIAGRAM PIE 3D
-  if (tabKey === 'grafik_bs') {
-    if (a.kBS <= 0) {
-      return `
-        ${headerInfo}
-        <div style="text-align:center; padding:26px 14px; color:#475569;">
-          <div style="font-size:1.1rem; font-weight:800; color:#1e3a8a; margin-bottom:6px;">DIAGRAM ANALISIS SOAL BENAR - SALAH (PIE 3D)</div>
-          <p style="margin:0;">Belum ada soal Benar-Salah (jumlah soal B-S = 0). Silakan atur jumlah soal B-S dan kunci jawabannya pada tab <b>Data &amp; Kunci</b> untuk menampilkan Diagram Pie 3D.</p>
-        </div>
-      `;
+  if (repId === 'grafik_bs') {
+    if (res.kBS === 0) {
+      return `${headerKop}<p style="color:var(--muted);padding:12px;">Tidak ada soal Benar-Salah (jumlah soal B-S = 0). Silakan atur jumlah soal B-S pada tab <b>Data & Kunci</b> untuk melihat Grafik Pie 3D Benar-Salah.</p>`;
     }
-    const bsStudentScores = a.bsMatrix.map(b => b.nilai);
-    return renderFourPanelAnalysisReport(a, {
-      chartMode: 'pie3d',
-      bannerLabel: 'DIAGRAM ANALISIS SOAL BENAR - SALAH (PIE 3D)',
-      soalSuffix: 'B-S',
-      prestasiSuffix: 'BENAR - SALAH',
-      itemsList: a.itemsBS,
-      studentScores: bsStudentScores,
-      prefixUid: 'bs_pie3d'
-    });
+    return buildQualityChartSuiteHTML(
+      res.itemsBS,
+      'pie3d',
+      `SOAL BENAR-SALAH (DIAGRAM LINGKARAN / PIE 3D • ${res.kBS} SOAL)`,
+      'Soal B-S'
+    );
   }
 
-  // VARIASI 3: URAIAN -> DIAGRAM DONAT 3D (SAMA PERSIS DENGAN DIAGRAM KAU.PDF)
-  if (tabKey === 'grafik_ur') {
-    if (a.kUR <= 0) {
-      return `
-        ${headerInfo}
-        <div style="text-align:center; padding:26px 14px; color:#475569;">
-          <div style="font-size:1.1rem; font-weight:800; color:#1e3a8a; margin-bottom:6px;">DIAGRAM ANALISIS SOAL URAIAN (DONAT 3D)</div>
-          <p style="margin:0;">Belum ada soal Uraian (jumlah soal Uraian = 0). Silakan atur jumlah soal Uraian pada tab <b>Data &amp; Kunci</b> untuk menampilkan Diagram Donat 3D.</p>
-        </div>
-      `;
+  if (repId === 'grafik_ur') {
+    if (res.kUR === 0) {
+      return `${headerKop}<p style="color:var(--muted);padding:12px;">Tidak ada soal uraian (jumlah soal uraian = 0).</p>`;
     }
-    const urStudentScores = a.urMatrix.map(u => u.nilai);
-    return renderFourPanelAnalysisReport(a, {
-      chartMode: 'donut3d',
-      bannerLabel: 'DIAGRAM ANALISIS SOAL URAIAN (DONAT 3D)',
-      soalSuffix: 'URAIAN',
-      prestasiSuffix: 'URAIAN',
-      itemsList: a.itemsUR,
-      studentScores: urStudentScores,
-      prefixUid: 'ur_donut3d'
-    });
+    return buildQualityChartSuiteHTML(
+      res.itemsUR,
+      'donut3d',
+      `SOAL URAIAN (DIAGRAM DONAT 3D • ${res.kUR} SOAL)`,
+      'Soal Uraian'
+    );
   }
 
-  if (tabKey === 'nilai_ur') {
-    if (a.kUR === 0) return `${headerInfo}<p>Tidak ada soal uraian pada ujian ini.</p>`;
-    const totalMax = state.config.maxUR.slice(0, a.kUR).reduce((s, v) => s + v, 0);
+  if (repId === 'nilai_ur') {
+    if (res.kUR === 0) return `${headerKop}<p>Tidak ada soal uraian (jumlah soal uraian = 0).</p>`;
     return `
-      ${headerInfo}
-      <h3>DAFTAR NILAI SOAL URAIAN (${a.kUR} SOAL • SKOR MAKS ${totalMax})</h3>
+      ${headerKop}
+      <h2>DAFTAR NILAI URAIAN (Sheet: NILAI UR)</h2>
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>No</th><th>${getIdFieldLabel()}</th><th>Nama Siswa</th>
-              ${Array.from({length: a.kUR}, (_, j) => `<th>No.${a.kPG + a.kBS + j + 1} (${state.config.maxUR[j]||4})</th>`).join('')}
-              <th>Jumlah</th><th>Nilai</th><th>Ket</th>
-            </tr>
-          </thead>
+          <thead><tr><th>No</th><th>${getIdFieldLabel()}</th><th>Nama Siswa</th>${state.config.maxUR.slice(0, res.kUR).map((mx, j) => `<th>U${j + 1}<br>(Maks ${mx})</th>`).join('')}<th>Skor</th><th>Nilai</th><th>Ket</th></tr></thead>
           <tbody>
             ${state.students.map((st, i) => `
               <tr>
-                <td>${i + 1}</td><td>${escapeAttr(st.nis || '-')}</td><td><b>${escapeAttr(st.nama)}</b></td>
-                ${a.urMatrix[i].row.map(v => `<td>${v}</td>`).join('')}
-                <td>${a.urMatrix[i].skor}</td>
-                <td><b>${a.urMatrix[i].nilai.toFixed(2)}</b></td>
-                <td><span class="badge ${a.urMatrix[i].tuntas === 'Tuntas' ? 'badge-tuntas' : 'badge-remed'}">${a.urMatrix[i].tuntas}</span></td>
+                <td>${i + 1}</td><td>${escapeAttr(st.nis || '-')}</td><td>${escapeAttr(st.nama)}</td>
+                ${res.urMatrix[i].row.map(v => `<td>${v}</td>`).join('')}
+                <td>${res.urMatrix[i].skor}</td>
+                <td><b>${res.urMatrix[i].nilai.toFixed(1)}</b></td>
+                <td><span class="badge ${res.urMatrix[i].tuntas === 'Tuntas' ? 'badge-tuntas' : 'badge-remed'}">${res.urMatrix[i].tuntas}</span></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
       </div>
-      ${renderSignatureBlockHTML()}
+      ${ttdFooter}
     `;
   }
 
-  if (tabKey === 'analisis_ur') {
-    if (a.kUR === 0) return `${headerInfo}<p>Tidak ada soal uraian pada ujian ini.</p>`;
+  if (repId === 'analisis_ur') {
+    if (res.kUR === 0) return `${headerKop}<p>Tidak ada soal uraian.</p>`;
     return `
-      ${headerInfo}
-      <h3>ANALISIS BUTIR SOAL URAIAN & CRONBACH'S ALPHA</h3>
+      ${headerKop}
+      <h2>ANALISIS BUTIR SOAL URAIAN (Sheet: Analisis UR)</h2>
       <div class="grid-3" style="margin-bottom:10px;">
-        <div class="stat-box"><div class="num">${a.cronbachUR.toFixed(3)}</div><div class="lbl">Cronbach's Alpha</div></div>
-        <div class="stat-box"><div class="num">${a.rTabel.toFixed(3)}</div><div class="lbl">r Tabel (N=${a.N})</div></div>
-        <div class="stat-box"><div class="num" style="color:${a.relStatusUR==='Reliabel'?'#059669':'#dc2626'};">${a.relStatusUR}</div><div class="lbl">Status Tes Uraian</div></div>
+        <div class="stat-box"><div class="num">${res.rTabel.toFixed(3)}</div><div class="lbl">r Tabel (N=${res.N})</div></div>
+        <div class="stat-box"><div class="num">${res.cronbachUR.toFixed(3)}</div><div class="lbl">Reliabilitas Alpha Cronbach</div></div>
+        <div class="stat-box"><div class="num">${res.relStatusUR}</div><div class="lbl">Status Reliabilitas</div></div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>No Soal</th><th>TK</th><th>Kategori TK</th><th>Daya Beda</th><th>Kategori DP</th><th>r_xy</th><th>Validitas</th><th>Bank Soal</th></tr></thead>
+          <thead><tr><th>No Soal</th><th>TK</th><th>Ket. TK</th><th>DP</th><th>Ket. DP</th><th>r hitung</th><th>Validitas</th><th>Bank Soal</th></tr></thead>
           <tbody>
-            ${a.itemsUR.map(it => `
+            ${res.itemsUR.map(it => `
               <tr>
                 <td><b>${it.no}</b></td>
                 <td>${it.tk.toFixed(2)}</td><td>${it.katTK}</td>
                 <td>${it.dp.toFixed(2)}</td><td>${it.katDP}</td>
-                <td>${it.rxy.toFixed(3)}</td>
+                <td>${it.rxy.toFixed(2)}</td>
                 <td><span class="badge ${it.valid === 'Valid' ? 'badge-tuntas' : 'badge-remed'}">${it.valid}</span></td>
-                <td><b>${it.bankSoal}</b></td>
+                <td><span class="badge ${it.bankSoal === 'Diterima' ? 'badge-tuntas' : (it.bankSoal === 'Ditolak' ? 'badge-remed' : 'badge-warn')}">${it.bankSoal}</span></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
       </div>
-      ${renderSignatureBlockHTML()}
+      ${ttdFooter}
     `;
   }
 
-  if (tabKey === 'nil_gab') {
-    const tuntasAkhir = a.gabungan.filter(g => g.ketAkhir === 'Tuntas').length;
+  if (repId === 'nil_gab') {
     return `
-      ${headerInfo}
-      <h3>NILAI GABUNGAN & NILAI AKHIR RAPOR</h3>
-      <p style="font-size:0.78rem; color:var(--muted);">Bobot: <b>${a.kUR === 0 ? '100% Objektif' : '70% Objektif + 30% Uraian'}</b> • Ketuntasan Klasikal Akhir: <b>${tuntasAkhir}/${a.N} (${a.N ? ((tuntasAkhir/a.N)*100).toFixed(0) : 0}%)</b></p>
+      ${headerKop}
+      <h2>REKAP NILAI GABUNGAN & AKHIR SETELAH REMEDIAL (Sheet: Nil Gab)</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>No</th><th>${getIdFieldLabel()}</th><th>Nama Siswa</th><th>Nilai Obj</th><th>Nilai UR</th><th>Nilai Gab</th><th>Ket Awal</th><th>Remedial</th><th>Nilai Akhir</th><th>Ket Akhir</th></tr></thead>
+          <thead><tr><th>No</th><th>${getIdFieldLabel()}</th><th>Nama Siswa</th><th>Nilai Objektif</th><th>Nilai UR</th><th>Nilai Gabungan</th><th>Ket Awal</th><th>Nilai Remedial</th><th>Nilai Akhir</th><th>Ket Akhir</th></tr></thead>
           <tbody>
             ${state.students.map((st, i) => {
-              const g = a.gabungan[i];
+              const g = res.gabungan[i];
               return `
                 <tr>
-                  <td>${i + 1}</td><td>${escapeAttr(st.nis || '-')}</td><td><b>${escapeAttr(st.nama)}</b></td>
-                  <td>${g.nPG.toFixed(1)}</td><td>${g.nUR.toFixed(1)}</td>
-                  <td><b>${g.nGab.toFixed(1)}</b></td>
+                  <td>${i + 1}</td><td>${escapeAttr(st.nis || '-')}</td><td>${escapeAttr(st.nama)}</td>
+                  <td>${g.nPG.toFixed(1)}</td><td>${g.nUR.toFixed(1)}</td><td><b>${g.nGab.toFixed(1)}</b></td>
                   <td><span class="badge ${g.ketGab === 'Tuntas' ? 'badge-tuntas' : 'badge-remed'}">${g.ketGab}</span></td>
-                  <td>${g.nRem !== null ? g.nRem : '-'}</td>
+                  <td>
+                    <input type="number" min="0" max="100" value="${st.remedial !== null ? st.remedial : ''}" placeholder="-"
+                      onchange="state.students[${i}].remedial = this.value === '' ? null : parseFloat(this.value); saveState(true); renderReport();"
+                      style="width:65px; padding:3px 5px; text-align:center;" />
+                  </td>
                   <td><b>${g.nAkhir.toFixed(1)}</b></td>
                   <td><span class="badge ${g.ketAkhir === 'Tuntas' ? 'badge-tuntas' : 'badge-remed'}">${g.ketAkhir}</span></td>
                 </tr>
@@ -5164,95 +5370,94 @@ function buildReportHTML(tabKey) {
           </tbody>
         </table>
       </div>
-      ${renderSignatureBlockHTML()}
+      ${ttdFooter}
     `;
   }
 
-  if (tabKey === 'remed') {
-    const remedList = state.students.map((st, i) => ({ st, i, g: a.gabungan[i] })).filter(x => x.g.ketGab === 'Remedial');
+  if (repId === 'remed') {
+    const st = state.students[selectedRemedStudent] || state.students[0];
+    const g = res.gabungan[selectedRemedStudent] || { nGab: 0, ketGab: '-', nAkhir: 0 };
+    const pgRow = res.pgMatrix[selectedRemedStudent]?.row || [];
+    const bsRow = res.bsMatrix[selectedRemedStudent]?.row || [];
+    const failedPG = [];
+    pgRow.forEach((v, idx) => { if (v === 0) failedPG.push(idx + 1); });
+    bsRow.forEach((v, idx) => { if (v === 0) failedPG.push(getBSQuestionNo(idx)); });
     return `
-      ${headerInfo}
-      <h3>DAFTAR SISWA WAJIB REMEDIAL (NILAI GABUNGAN &lt; ${a.kktp})</h3>
-      ${remedList.length === 0 ? '<p style="color:#059669;font-weight:700;">Semua siswa telah mencapai KKTP!</p>' : `
+      ${headerKop}
+      <h2>LEMBAR HASIL EVALUASI & REMEDIAL SISWA (Sheet: Remedial Siswa)</h2>
+      <div style="margin-bottom:10px;">
+        <label>Pilih Peserta Didik:</label>
+        <select onchange="selectedRemedStudent=parseInt(this.value); renderReport();">
+          ${state.students.map((s, i) => `<option value="${i}" ${i === selectedRemedStudent ? 'selected' : ''}>${i + 1}. [${s.nis || '-'}] ${s.nama} (Nilai: ${res.gabungan[i].nGab.toFixed(1)} - ${res.gabungan[i].ketGab})</option>`).join('')}
+        </select>
+      </div>
+      <div class="stat-box" style="text-align:left; margin-bottom:10px;">
+        <div><b>${getIdFieldLabel()}:</b> ${escapeAttr(st.nis || '-')} &nbsp;|&nbsp; <b>Nama Siswa:</b> ${escapeAttr(st.nama)}</div>
+        <div><b>Nilai Awal (Gabungan):</b> ${g.nGab.toFixed(1)} &nbsp;|&nbsp; <b>KKTP:</b> ${res.kktp} &nbsp;|&nbsp; <b>Status:</b> ${g.ketGab}</div>
+        <div><b>Nilai Akhir Setelah Remedial:</b> ${g.nAkhir.toFixed(1)}</div>
+      </div>
+      <p style="font-size:0.84rem;"><b>Butir Soal Objektif yang Belum Dikuasai (Perlu Pembelajaran Ulang):</b><br>
+      ${failedPG.length > 0 ? 'Nomor: ' + failedPG.join(', ') : 'Semua soal objektif telah dijawab dengan benar.'}</p>
+      ${ttdFooter}
+    `;
+  }
+
+  if (repId === 'perbaikan') {
+    const remedList = state.students.map((st, i) => ({ st, i, g: res.gabungan[i] })).filter(x => x.g.ketGab === 'Remedial');
+    return `
+      ${headerKop}
+      <h2>PROGRAM PELAKSANAAN PERBAIKAN / REMEDIAL (Sheet: Perbaikan)</h2>
+      <p style="font-size:0.8rem;">Daftar peserta didik yang memperoleh nilai di bawah KKTP (${res.kktp}): <b>${remedList.length} Siswa</b></p>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>No</th><th>${getIdFieldLabel()}</th><th>Nama Siswa</th><th>Nilai Awal</th><th>KKTP</th><th>Input Nilai Remedial</th><th>Nilai Akhir</th></tr></thead>
+          <thead><tr><th>No</th><th>${getIdFieldLabel()}</th><th>Nama Siswa</th><th>Nilai Awal</th><th>Bentuk Perbaikan</th><th>Nilai Remedial</th><th>Nilai Akhir</th><th>Keterangan</th></tr></thead>
           <tbody>
-            ${remedList.map((x, idx) => `
+            ${remedList.map((item, idx) => `
               <tr>
-                <td>${idx + 1}</td><td>${escapeAttr(x.st.nis || '-')}</td><td><b>${escapeAttr(x.st.nama)}</b></td>
-                <td style="color:#dc2626;font-weight:700;">${x.g.nGab.toFixed(1)}</td>
-                <td>${a.kktp}</td>
-                <td><input type="number" min="0" max="100" value="${x.st.remedial ?? ''}" placeholder="Isi nilai" style="width:80px;padding:4px;"
-                  onchange="state.students[${x.i}].remedial=this.value===''?null:parseFloat(this.value); saveState();" /></td>
-                <td><b>${x.g.nAkhir.toFixed(1)}</b></td>
+                <td>${idx + 1}</td><td>${escapeAttr(item.st.nis || '-')}</td><td>${escapeAttr(item.st.nama)}</td>
+                <td>${item.g.nGab.toFixed(1)}</td>
+                <td>Bimbingan Khusus & Tes Ulang</td>
+                <td>${item.g.nRem !== null ? item.g.nRem : '-'}</td>
+                <td><b>${item.g.nAkhir.toFixed(1)}</b></td>
+                <td><span class="badge ${item.g.ketAkhir === 'Tuntas' ? 'badge-tuntas' : 'badge-remed'}">${item.g.ketAkhir}</span></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
-      </div>`}
-      ${renderSignatureBlockHTML()}
+      </div>
+      ${ttdFooter}
     `;
   }
 
-  if (tabKey === 'perbaikan') {
-    const st = state.students[selectedRemedStudent] || state.students[0];
-    const wrongPG = [];
-    const ans = (st.pg || '').padEnd(a.kPG, 'V');
-    for (let j = 0; j < a.kPG; j++) {
-      if (ans[j] !== (state.config.kunciPG[j] || '')) wrongPG.push(j + 1);
-    }
-    return `
-      ${headerInfo}
-      <h3>LEMBAR HASIL ANALISIS & PERBAIKAN INDIVIDU SISWA</h3>
-      <div style="margin-bottom:10px;">
-        <label>Pilih Siswa:</label>
-        <select onchange="selectedRemedStudent=parseInt(this.value); renderReport();">
-          ${state.students.map((s, idx) => `<option value="${idx}" ${idx===selectedRemedStudent?'selected':''}>${idx+1}. [${escapeAttr(s.nis || '-')}] ${escapeAttr(s.nama)}</option>`).join('')}
-        </select>
-      </div>
-      <div style="border:1px solid #cbd5e1; border-radius:8px; padding:12px; background:#f8fafc;">
-        <p style="margin:4px 0;"><b>Nama Siswa:</b> ${escapeAttr(st.nama)} (${getIdFieldLabel()}: ${escapeAttr(st.nis || '-')})</p>
-        <p style="margin:4px 0;"><b>Nilai Awal:</b> ${a.gabungan[selectedRemedStudent].nGab.toFixed(1)} | <b>KKTP:</b> ${a.kktp} | <b>Status:</b> ${a.gabungan[selectedRemedStudent].ketGab}</p>
-        <p style="margin:4px 0;"><b>Butir Soal PG yang Belum Tuntas (Perlu Perbaikan):</b></p>
-        <div style="padding:8px; background:#fff; border:1px dashed #94a3b8; border-radius:6px; font-weight:700; color:#dc2626;">
-          ${wrongPG.length > 0 ? 'Nomor: ' + wrongPG.join(', ') : 'Tidak ada (Semua PG Benar)'}
-        </div>
-      </div>
-      ${renderSignatureBlockHTML()}
-    `;
-  }
-
-  // ==================== LEGER MULTI-MAPEL UNTUK KELAS AKTIF ====================
-  if (tabKey === 'leger_mapel') {
+  if (repId === 'leger_mapel') {
     const curKelas = (state.meta.kelas || '').trim();
     const classSessions = workspace.sessions.filter(s => (s.meta.kelas || '').trim() === curKelas);
-    const analyticsPerSes = classSessions.map(s => ({
+    const analyticsMap = classSessions.map(s => ({
       ses: s,
       ana: computeAllAnalyticsForSession(s)
     }));
 
-    const studentMap = new Map();
+    const rosterMap = new Map();
     classSessions.forEach((s, sIdx) => {
-      const ana = analyticsPerSes[sIdx].ana;
       s.students.forEach((st, stIdx) => {
-        const key = `${(st.nis || '').trim()}::${(st.nama || '').trim().toUpperCase()}`;
-        if (!studentMap.has(key)) {
-          studentMap.set(key, {
+        const key = (st.nis && st.nis.trim()) ? `id:${st.nis.trim()}` : `nm:${(st.nama || '').trim().toUpperCase()}`;
+        if (!rosterMap.has(key)) {
+          rosterMap.set(key, {
             nis: st.nis || '-',
             nama: st.nama || '-',
             scores: {}
           });
         }
-        studentMap.get(key).scores[s.id] = ana.gabungan[stIdx] ? ana.gabungan[stIdx].nAkhir : null;
+        const entry = rosterMap.get(key);
+        entry.scores[sIdx] = analyticsMap[sIdx].gabungan[stIdx]?.nAkhir ?? null;
       });
     });
 
-    const rows = Array.from(studentMap.values());
+    const rows = Array.from(rosterMap.values());
     return `
       <div style="text-align:center; margin-bottom:10px; border-bottom:2px solid #1e3a8a; padding-bottom:6px;">
-        <div style="font-weight:800; font-size:0.95rem; color:#1e3a8a;">LEGER NILAI AKHIR LINTAS MATA PELAJARAN • ${escapeAttr(m.sekolah).toUpperCase()}</div>
-        <div style="font-size:0.78rem; color:#334155;">Kelas: <b>${escapeAttr(curKelas)}</b> | Tahun Pelajaran: <b>${escapeAttr(m.tapel)}</b> | Jumlah Mapel: <b>${classSessions.length}</b></div>
+        <div style="font-weight:800; font-size:0.95rem; color:#1e3a8a;">LEGER NILAI LINTAS MATA PELAJARAN — ${escapeAttr(m.sekolah.toUpperCase())}</div>
+        <div style="font-size:0.78rem; color:#334155;">Kelas: <b>${escapeAttr(curKelas)}</b> | Tapel: <b>${escapeAttr(m.tapel)}</b> | Total Mata Pelajaran: <b>${classSessions.length} Mapel</b></div>
       </div>
       <div class="table-wrap">
         <table>
@@ -5261,59 +5466,72 @@ function buildReportHTML(tabKey) {
               <th>No</th>
               <th>${getIdFieldLabel()}</th>
               <th>Nama Siswa</th>
-              ${classSessions.map(s => `<th>${escapeAttr(s.meta.mapel)}<br><small>(KKTP ${s.meta.kktp})</small></th>`).join('')}
-              <th>Jumlah</th>
-              <th>Rata-rata</th>
+              ${classSessions.map(s => `<th style="text-align:center;">${escapeAttr(s.meta.mapel)}<br><small style="font-weight:400;">KKTP ${s.meta.kktp}</small></th>`).join('')}
+              <th style="text-align:center;">Jumlah</th>
+              <th style="text-align:center;">Rata-rata</th>
             </tr>
           </thead>
           <tbody>
             ${rows.map((r, idx) => {
               let sum = 0, cnt = 0;
-              const cols = classSessions.map(s => {
-                const val = r.scores[s.id];
-                if (val !== null && val !== undefined && !isNaN(val)) {
+              const colsHtml = classSessions.map((s, sIdx) => {
+                const val = r.scores[sIdx];
+                if (val !== null && val !== undefined) {
                   sum += val;
                   cnt++;
                   const below = val < (s.meta.kktp - 0.5);
-                  return `<td style="text-align:center; font-weight:700; color:${below ? '#dc2626' : '#0f172a'};">${val.toFixed(1)}</td>`;
+                  return `<td style="text-align:center; ${below ? 'color:#dc2626;font-weight:700;background:#fef2f2;' : ''}">${val.toFixed(1)}</td>`;
                 }
-                return `<td style="text-align:center; color:#94a3b8;">-</td>`;
+                return `<td style="text-align:center;color:#94a3b8;">-</td>`;
               }).join('');
-              const avg = cnt > 0 ? sum / cnt : 0;
+              const avg = cnt > 0 ? (sum / cnt).toFixed(1) : '-';
               return `
                 <tr>
                   <td>${idx + 1}</td>
-                  <td>${escapeAttr(r.nis)}</td>
+                  <td style="font-family:monospace;">${escapeAttr(r.nis)}</td>
                   <td><b>${escapeAttr(r.nama)}</b></td>
-                  ${cols}
-                  <td style="text-align:center;"><b>${sum.toFixed(1)}</b></td>
-                  <td style="text-align:center; background:#eff6ff;"><b>${avg.toFixed(2)}</b></td>
+                  ${colsHtml}
+                  <td style="text-align:center;"><b>${cnt > 0 ? sum.toFixed(1) : '-'}</b></td>
+                  <td style="text-align:center;"><b>${avg}</b></td>
                 </tr>
               `;
             }).join('')}
           </tbody>
         </table>
       </div>
-      ${renderSignatureBlockHTML()}
+      ${ttdFooter}
     `;
   }
 
-  // ==================== REKAPITULASI ANTAR KELAS & MATA PELAJARAN ====================
-  if (tabKey === 'rekap_kelas') {
+  if (repId === 'rekap_kelas') {
     const summaryRows = workspace.sessions.map((s, idx) => {
       const ana = computeAllAnalyticsForSession(s);
+      const vals = ana.gabungan.map(g => g.nAkhir);
+      const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+      const maxV = vals.length > 0 ? Math.max(...vals) : 0;
+      const minV = vals.length > 0 ? Math.min(...vals) : 0;
       const tuntas = ana.gabungan.filter(g => g.ketAkhir === 'Tuntas').length;
-      const avg = ana.N > 0 ? ana.gabungan.reduce((acc, g) => acc + g.nAkhir, 0) / ana.N : 0;
-      const maxVal = ana.N > 0 ? Math.max(...ana.gabungan.map(g => g.nAkhir)) : 0;
-      const minVal = ana.N > 0 ? Math.min(...ana.gabungan.map(g => g.nAkhir)) : 0;
-      const pctTuntas = ana.N > 0 ? (tuntas / ana.N) * 100 : 0;
-      return { s, ana, tuntas, avg, maxVal, minVal, pctTuntas, idx };
-    });
+      const pct = ana.N > 0 ? Math.round((tuntas / ana.N) * 100) : 0;
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td><b>${escapeAttr(s.meta.kelas)}</b></td>
+          <td><b>${escapeAttr(s.meta.mapel)}</b></td>
+          <td>${escapeAttr(s.meta.guru)}</td>
+          <td style="text-align:center;">${ana.N}</td>
+          <td style="text-align:center;">${s.meta.kktp}</td>
+          <td style="text-align:center;"><b>${avg.toFixed(1)}</b></td>
+          <td style="text-align:center;">${maxV.toFixed(1)}</td>
+          <td style="text-align:center;">${minV.toFixed(1)}</td>
+          <td style="text-align:center;"><span class="badge ${pct >= 75 ? 'badge-tuntas' : 'badge-warn'}">${tuntas}/${ana.N} (${pct}%)</span></td>
+        </tr>
+      `;
+    }).join('');
 
     return `
       <div style="text-align:center; margin-bottom:10px; border-bottom:2px solid #1e3a8a; padding-bottom:6px;">
-        <div style="font-weight:800; font-size:0.95rem; color:#1e3a8a;">REKAPITULASI HASIL UJIAN SEMUA KELAS & MATA PELAJARAN</div>
-        <div style="font-size:0.78rem; color:#334155;">Sekolah: <b>${escapeAttr(m.sekolah)}</b> | Tahun Pelajaran: <b>${escapeAttr(m.tapel)}</b> | Total Sesi: <b>${workspace.sessions.length}</b></div>
+        <div style="font-weight:800; font-size:0.95rem; color:#1e3a8a;">REKAPITULASI HASIL UJIAN ANTAR KELAS & MATA PELAJARAN — ${escapeAttr(m.sekolah.toUpperCase())}</div>
+        <div style="font-size:0.78rem; color:#334155;">Tapel: <b>${escapeAttr(m.tapel)}</b> | Total Sesi Kelas & Mapel: <b>${workspace.sessions.length} Sesi</b></div>
       </div>
       <div class="table-wrap">
         <table>
@@ -5323,35 +5541,18 @@ function buildReportHTML(tabKey) {
               <th>Kelas</th>
               <th>Mata Pelajaran</th>
               <th>Guru Pengajar</th>
-              <th>Peserta</th>
-              <th>KKTP</th>
-              <th>Terendah</th>
-              <th>Tertinggi</th>
-              <th>Rata-rata</th>
-              <th>Tuntas</th>
-              <th>Ketuntasan</th>
+              <th style="text-align:center;">Peserta</th>
+              <th style="text-align:center;">KKTP</th>
+              <th style="text-align:center;">Rata-rata</th>
+              <th style="text-align:center;">Tertinggi</th>
+              <th style="text-align:center;">Terendah</th>
+              <th style="text-align:center;">Ketuntasan</th>
             </tr>
           </thead>
-          <tbody>
-            ${summaryRows.map((r, idx) => `
-              <tr style="${r.s.id === state.id ? 'background:#eff6ff;' : ''}">
-                <td>${idx + 1}</td>
-                <td><b>${escapeAttr(r.s.meta.kelas)}</b></td>
-                <td><b>${escapeAttr(r.s.meta.mapel)}</b></td>
-                <td>${escapeAttr(r.s.meta.guru)}</td>
-                <td style="text-align:center;">${r.ana.N}</td>
-                <td style="text-align:center;">${r.s.meta.kktp}</td>
-                <td style="text-align:center;">${r.minVal.toFixed(1)}</td>
-                <td style="text-align:center;">${r.maxVal.toFixed(1)}</td>
-                <td style="text-align:center;"><b>${r.avg.toFixed(2)}</b></td>
-                <td style="text-align:center;">${r.tuntas}/${r.ana.N}</td>
-                <td style="text-align:center;"><span class="badge ${r.pctTuntas >= 75 ? 'badge-tuntas' : 'badge-warn'}">${r.pctTuntas.toFixed(0)}%</span></td>
-              </tr>
-            `).join('')}
-          </tbody>
+          <tbody>${summaryRows}</tbody>
         </table>
       </div>
-      ${renderSignatureBlockHTML()}
+      ${ttdFooter}
     `;
   }
 
@@ -5359,8 +5560,8 @@ function buildReportHTML(tabKey) {
 }
 
 function renderReport() {
-  const c = document.getElementById('reportContainer');
-  if (c) c.innerHTML = buildReportHTML(currentReportTab);
+  const container = document.getElementById('reportContainer');
+  container.innerHTML = buildReportHTML(currentReportTab);
 }
 
 async function printCurrentReport() {
@@ -5369,117 +5570,97 @@ async function printCurrentReport() {
 }
 
 async function printAllReports() {
-  const keys = ['nilai_mc', 'analisis_mc', 'grafik_mc', 'grafik_bs', 'grafik_ur', 'nilai_ur', 'analisis_ur', 'nil_gab', 'remed', 'perbaikan', 'leger_mapel', 'rekap_kelas'];
-  const pages = keys.map(k => `<section class="print-page">${buildReportHTML(k)}</section>`).join('');
-  await triggerPrintPages(pages, 'A4 portrait');
+  const tabs = ['nilai_mc', 'analisis_mc', 'grafik_mc'];
+  if ((state.config.jmlBS || 0) > 0) tabs.push('grafik_bs');
+  if ((state.config.jmlUR || 0) > 0) tabs.push('grafik_ur', 'nilai_ur', 'analisis_ur');
+  tabs.push('nil_gab', 'perbaikan', 'leger_mapel', 'rekap_kelas');
+  const pagesHtml = tabs.map(t => `<section class="print-page">${buildReportHTML(t)}</section>`).join('');
+  await triggerPrintPages(pagesHtml, 'A4 portrait');
 }
 
-// ==================== EKSPOR EXCEL (.XLSX) MULTI-SHEET KAU + REKAP MULTI-KELAS ====================
+// ==================== EKSPOR EXCEL (.XLSX) LENGKAP ====================
 function exportKAUExcel() {
-  if (typeof XLSX === 'undefined') return alert('Library XLSX belum termuat. Pastikan koneksi internet aktif saat pertama membuka aplikasi.');
-  const a = computeAllAnalytics();
-  const m = state.meta;
+  if (typeof XLSX === 'undefined') {
+    return alert('Pustaka Excel membutuhkan koneksi internet saat pertama kali dimuat.');
+  }
   const wb = XLSX.utils.book_new();
-  const idLabel = getIdFieldLabel();
+  const res = computeAllAnalytics();
+  const m = state.meta;
 
-  const wsData = XLSX.utils.aoa_to_sheet([
-    ['KAU - KOREKSI & ANALISIS ULANGAN'],
-    ['Nama Sekolah', m.sekolah, '', 'Jenis Tes', m.jenisTes],
-    ['Kepala Sekolah', m.kepsek, '', 'Materi', m.materi],
-    ['NIP Kepsek', m.nipKepsek, '', 'Kelas / Sem', m.kelas],
-    ['Guru Pengajar', m.guru, '', 'Tahun Pelajaran', m.tapel],
-    ['NIP Guru', m.nipGuru, '', 'Tanggal Tes', m.tglTes],
-    ['Mata Pelajaran', m.mapel, '', 'Tanggal Periksa', m.tglPeriksa],
-    ['KKTP', m.kktp, '', 'Jumlah PG / B-S / UR', `${a.kPG} / ${a.kBS} / ${a.kUR}`],
-    ['Kunci PG', state.config.kunciPG, '', 'Kunci B-S', state.config.kunciBS || '-'],
-    [],
-    ['No', idLabel, 'Nama Siswa', 'Jawaban PG', 'Jawaban B-S', ...Array.from({length:a.kUR},(_,j)=>`Skor UR ${a.kPG+a.kBS+j+1}`), 'Nilai Remedial'],
-    ...state.students.map((st, i) => [i+1, st.nis, st.nama, st.pg, st.bs || '', ...Array.from({length:a.kUR},(_,j)=>st.ur[j]??0), st.remedial??''])
-  ]);
-  XLSX.utils.book_append_sheet(wb, wsData, 'data');
+  const dataSheet = [
+    ['IDENTITAS UJIAN - APLIKASI KAU'],
+    ['Nama Sekolah', m.sekolah], ['Kepala Sekolah', m.kepsek], ['NIP Kepsek', m.nipKepsek],
+    ['Guru Pengajar', m.guru], ['NIP Guru', m.nipGuru], ['Mata Pelajaran', m.mapel],
+    ['Jenis Tes', m.jenisTes], ['Materi Pokok', m.materi], ['Kelas / Semester', m.kelas],
+    ['Tahun Pelajaran', m.tapel], ['Tanggal Tes', m.tglTes], ['Tanggal Periksa', m.tglPeriksa],
+    ['KKTP', m.kktp], ['Tempat TTD', m.tempat], ['Jenis ID LJK', getIdFieldLabel()],
+    ['Kunci PG', state.config.kunciPG], ['Kunci B-S', state.config.kunciBS || '-']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dataSheet), 'data');
 
-  const wsMC = XLSX.utils.aoa_to_sheet([
-    ['NILAI OBJEKTIF (PG & B-S)', `${m.mapel} - ${m.kelas}`],
-    ['No', idLabel, 'Nama Siswa', 'Skor PG', 'Skor B-S', 'Total Benar', 'Nilai', 'Keterangan'],
-    ...state.students.map((st, i) => [i+1, st.nis, st.nama, a.pgMatrix[i].skor, a.bsMatrix[i].skor, a.objMatrix[i].skor, Number(a.objMatrix[i].nilai.toFixed(2)), a.objMatrix[i].tuntas])
-  ]);
-  XLSX.utils.book_append_sheet(wb, wsMC, 'NILAI MC');
+  const idColHeader = getIdFieldLabel();
+  const mcHeader = ['No', idColHeader, 'Nama Siswa', 'Jawaban PG', 'Skor PG'];
+  if (res.kBS > 0) mcHeader.push('Jawaban B-S', 'Skor B-S');
+  mcHeader.push('Total Skor', 'Nilai Objektif', 'Keterangan');
 
-  const wsAnMC = XLSX.utils.aoa_to_sheet([
-    ['ANALISIS BUTIR SOAL PILIHAN GANDA', `KR-20: ${a.kr20.toFixed(3)} (${a.relStatusPG})`, `r Tabel: ${a.rTabel}`],
-    ['No Soal', 'TK', 'Kategori TK', 'Daya Beda', 'Kategori DP', 'r_xy', 'Validitas', 'Bank Soal'],
-    ...a.itemsPG.map(it => [it.no, Number(it.tk.toFixed(3)), it.katTK, Number(it.dp.toFixed(3)), it.katDP, Number(it.rxy.toFixed(3)), it.valid, it.bankSoal])
-  ]);
-  XLSX.utils.book_append_sheet(wb, wsAnMC, 'Analisis MC');
+  const mcRows = [mcHeader];
+  state.students.forEach((st, i) => {
+    const r = [i + 1, st.nis || '', st.nama, st.pg, res.pgMatrix[i].skor];
+    if (res.kBS > 0) r.push(st.bs || '', res.bsMatrix[i].skor);
+    r.push(res.objMatrix[i].skor, Number(res.objMatrix[i].nilai.toFixed(2)), res.objMatrix[i].tuntas);
+    mcRows.push(r);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mcRows), 'NILAI MC');
 
-  if (a.kBS > 0) {
-    const wsAnBS = XLSX.utils.aoa_to_sheet([
-      ['ANALISIS BUTIR SOAL BENAR-SALAH', `KR-20: ${a.kr20BS.toFixed(3)} (${a.relStatusBS})`, `r Tabel: ${a.rTabel}`],
-      ['No Soal', 'Benar', 'Salah', 'Kosong', 'TK', 'Kategori TK', 'Daya Beda', 'Kategori DP', 'r_xy', 'Validitas', 'Bank Soal'],
-      ...a.itemsBS.map(it => [it.no, it.benar, it.salah, it.kosong, Number(it.tk.toFixed(3)), it.katTK, Number(it.dp.toFixed(3)), it.katDP, Number(it.rxy.toFixed(3)), it.valid, it.bankSoal])
-    ]);
-    XLSX.utils.book_append_sheet(wb, wsAnBS, 'Analisis BS');
+  const anMcRows = [['No Soal', 'Tingkat Kesukaran', 'Ket TK', 'Daya Pembeda', 'Ket DP', 'r hitung', 'r tabel', 'Validitas', 'Bank Soal']];
+  res.itemsPG.forEach(it => {
+    anMcRows.push([it.no, Number(it.tk.toFixed(3)), it.katTK, Number(it.dp.toFixed(3)), it.katDP, Number(it.rxy.toFixed(3)), res.rTabel, it.valid, it.bankSoal]);
+  });
+  anMcRows.push([], ['Reliabilitas KR-20 PG', Number(res.kr20.toFixed(3)), res.relStatusPG]);
+  if (res.kBS > 0) {
+    anMcRows.push([], ['ANALISIS BUTIR SOAL BENAR-SALAH'], ['No Soal', 'Benar', 'Salah', 'Kosong', 'Ganda', 'TK', 'Ket TK', 'DP', 'Ket DP', 'r hitung', 'Validitas', 'Bank Soal']);
+    res.itemsBS.forEach(it => {
+      anMcRows.push([it.no, it.benar, it.salah, it.kosong, it.ganda, Number(it.tk.toFixed(3)), it.katTK, Number(it.dp.toFixed(3)), it.katDP, Number(it.rxy.toFixed(3)), it.valid, it.bankSoal]);
+    });
+    anMcRows.push([], ['Reliabilitas KR-20 B-S', Number(res.kr20BS.toFixed(3)), res.relStatusBS]);
+  }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(anMcRows), 'Analisis MC');
+
+  if (res.kUR > 0) {
+    const urRows = [['No', idColHeader, 'Nama Siswa', ...state.config.maxUR.slice(0, res.kUR).map((_, j) => `U${j + 1}`), 'Skor UR', 'Nilai UR', 'Keterangan']];
+    state.students.forEach((st, i) => {
+      urRows.push([i + 1, st.nis || '', st.nama, ...res.urMatrix[i].row, res.urMatrix[i].skor, Number(res.urMatrix[i].nilai.toFixed(2)), res.urMatrix[i].tuntas]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(urRows), 'NILAI UR');
+
+    const anUrRows = [['No Soal', 'Tingkat Kesukaran', 'Ket TK', 'Daya Pembeda', 'Ket DP', 'r hitung', 'r tabel', 'Validitas', 'Bank Soal']];
+    res.itemsUR.forEach(it => {
+      anUrRows.push([it.no, Number(it.tk.toFixed(3)), it.katTK, Number(it.dp.toFixed(3)), it.katDP, Number(it.rxy.toFixed(3)), res.rTabel, it.valid, it.bankSoal]);
+    });
+    anUrRows.push([], ['Reliabilitas Alpha Cronbach', Number(res.cronbachUR.toFixed(3)), res.relStatusUR]);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(anUrRows), 'Analisis UR');
   }
 
-  if (a.kUR > 0) {
-    const wsUR = XLSX.utils.aoa_to_sheet([
-      ['NILAI SOAL URAIAN'],
-      ['No', idLabel, 'Nama Siswa', ...Array.from({length:a.kUR},(_,j)=>`No.${a.kPG+a.kBS+j+1}`), 'Jumlah Skor', 'Nilai', 'Keterangan'],
-      ...state.students.map((st, i) => [i+1, st.nis, st.nama, ...a.urMatrix[i].row, a.urMatrix[i].skor, Number(a.urMatrix[i].nilai.toFixed(2)), a.urMatrix[i].tuntas])
-    ]);
-    XLSX.utils.book_append_sheet(wb, wsUR, 'NILAI UR');
+  const gabRows = [['No', idColHeader, 'Nama Siswa', 'Nilai Objektif', 'Nilai UR', 'Nilai Gabungan', 'Ket Awal', 'Nilai Remedial', 'Nilai Akhir', 'Ket Akhir']];
+  state.students.forEach((st, i) => {
+    const g = res.gabungan[i];
+    gabRows.push([i + 1, st.nis || '', st.nama, Number(g.nPG.toFixed(2)), Number(g.nUR.toFixed(2)), Number(g.nGab.toFixed(2)), g.ketGab, g.nRem ?? '', Number(g.nAkhir.toFixed(2)), g.ketAkhir]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(gabRows), 'Nil Gab');
 
-    const wsAnUR = XLSX.utils.aoa_to_sheet([
-      ['ANALISIS BUTIR SOAL URAIAN', `Cronbach Alpha: ${a.cronbachUR.toFixed(3)} (${a.relStatusUR})`, `r Tabel: ${a.rTabel}`],
-      ['No Soal', 'TK', 'Kategori TK', 'Daya Beda', 'Kategori DP', 'r_xy', 'Validitas', 'Bank Soal'],
-      ...a.itemsUR.map(it => [it.no, Number(it.tk.toFixed(3)), it.katTK, Number(it.dp.toFixed(3)), it.katDP, Number(it.rxy.toFixed(3)), it.valid, it.bankSoal])
-    ]);
-    XLSX.utils.book_append_sheet(wb, wsAnUR, 'Analisis UR');
-  }
+  const rekapRows = [['No', 'Kelas', 'Mata Pelajaran', 'Guru', 'Peserta', 'KKTP', 'Rata-rata', 'Tertinggi', 'Terendah', 'Tuntas']];
+  workspace.sessions.forEach((s, idx) => {
+    const ana = computeAllAnalyticsForSession(s);
+    const vals = ana.gabungan.map(g => g.nAkhir);
+    const avg = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+    const maxV = vals.length > 0 ? Math.max(...vals) : 0;
+    const minV = vals.length > 0 ? Math.min(...vals) : 0;
+    const tuntas = ana.gabungan.filter(g => g.ketAkhir === 'Tuntas').length;
+    rekapRows.push([idx + 1, s.meta.kelas, s.meta.mapel, s.meta.guru, ana.N, s.meta.kktp, Number(avg.toFixed(2)), Number(maxV.toFixed(2)), Number(minV.toFixed(2)), `${tuntas}/${ana.N}`]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rekapRows), 'Rekap Antar Kelas');
 
-  const wsGab = XLSX.utils.aoa_to_sheet([
-    ['NILAI GABUNGAN & AKHIR RAPOR'],
-    ['No', idLabel, 'Nama Siswa', 'Nilai Obj', 'Nilai UR', 'Nilai Gabungan', 'Ket Awal', 'Nilai Remedial', 'Nilai Akhir', 'Ket Akhir'],
-    ...state.students.map((st, i) => {
-      const g = a.gabungan[i];
-      return [i+1, st.nis, st.nama, Number(g.nPG.toFixed(2)), Number(g.nUR.toFixed(2)), Number(g.nGab.toFixed(2)), g.ketGab, g.nRem??'', Number(g.nAkhir.toFixed(2)), g.ketAkhir];
-    })
-  ]);
-  XLSX.utils.book_append_sheet(wb, wsGab, 'Nil Gab');
-
-  const wsRekapAll = XLSX.utils.aoa_to_sheet([
-    ['REKAPITULASI SEMUA KELAS & MATA PELAJARAN', m.sekolah],
-    ['No', 'Kelas', 'Mata Pelajaran', 'Guru Pengajar', 'Peserta', 'KKTP', 'Rata-rata', 'Jumlah Tuntas', 'Persen Tuntas'],
-    ...workspace.sessions.map((s, idx) => {
-      const ana = computeAllAnalyticsForSession(s);
-      const tuntas = ana.gabungan.filter(g => g.ketAkhir === 'Tuntas').length;
-      const avg = ana.N > 0 ? ana.gabungan.reduce((acc, g) => acc + g.nAkhir, 0) / ana.N : 0;
-      const pct = ana.N > 0 ? (tuntas / ana.N) * 100 : 0;
-      return [idx + 1, s.meta.kelas, s.meta.mapel, s.meta.guru, ana.N, s.meta.kktp, Number(avg.toFixed(2)), tuntas, `${pct.toFixed(1)}%`];
-    })
-  ]);
-  XLSX.utils.book_append_sheet(wb, wsRekapAll, 'Rekap Semua Kelas');
-
-  XLSX.writeFile(wb, `KAU_${m.kelas.replace(/\W+/g,'_')}_${m.mapel.replace(/\s+/g,'_')}.xlsx`);
-}
-
-// ==================== NAVIGASI TAB ====================
-function switchTab(tabId, btn) {
-  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + tabId).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  if (tabId === 'ljk') renderLJKPreview();
-  if (tabId === 'input') renderInputJawabanTable();
-  if (tabId === 'laporan') renderReport();
-  if (tabId !== 'scan' && cameraStream) stopCamera();
-}
-
-function switchReport(repId, btn) {
-  currentReportTab = repId;
-  document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderReport();
+  XLSX.writeFile(wb, `KAU_${m.kelas.replace(/\W+/g, '_')}_${m.mapel}_${m.sekolah.replace(/\s+/g, '_')}.xlsx`);
 }
 
 window.addEventListener('DOMContentLoaded', initApp);
