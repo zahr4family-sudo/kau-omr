@@ -6,7 +6,7 @@
   "lang": "id-ID",
   "start_url": "./index.html",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#f1f5f9",
   "theme_color": "#1d4ed8",
