@@ -2,7 +2,10 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#1d4ed8" />
   <meta name="description" content="KAU - Koreksi & Analisis Ulangan (OMR Multi-Kelas & Multi-Pelajaran)" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
@@ -1057,17 +1060,26 @@ function persistNow() {
   try {
     syncMasterListsFromSessions();
     const serialized = JSON.stringify(workspace);
-    localStorage.setItem(STORAGE_KEY_KAU, serialized);
+    let localSaved = false;
+    try {
+      localStorage.setItem(STORAGE_KEY_KAU, serialized);
+      localSaved = true;
+    } catch (storageError) {
+      console.warn('localStorage tidak dapat menyimpan data; mencoba IndexedDB:', storageError);
+    }
+    // IndexedDB tetap dicoba meskipun localStorage penuh/dinonaktifkan.
     saveToIDB(workspace);
     const badge = document.getElementById('saveStatusBadge');
     if (badge) {
       const now = new Date();
       const hh = String(now.getHours()).padStart(2, '0');
       const mm = String(now.getMinutes()).padStart(2, '0');
-      badge.textContent = `💾 Tersimpan ${hh}:${mm}`;
+      badge.textContent = `${localSaved ? '💾' : '🗄️'} ${localSaved ? 'Tersimpan' : 'Disimpan lokal'} ${hh}:${mm}`;
     }
   } catch (e) {
-    console.warn('Gagal menyimpan ke localStorage:', e);
+    console.warn('Gagal menyiapkan penyimpanan data:', e);
+    const badge = document.getElementById('saveStatusBadge');
+    if (badge) badge.textContent = '⚠️ Penyimpanan bermasalah';
   }
 }
 
@@ -1489,12 +1501,17 @@ async function initApp() {
     navigator.storage.persist().catch(() => {});
   }
   let loaded = null;
-  let rawStored = localStorage.getItem(STORAGE_KEY_KAU);
-  if (!rawStored) {
-    for (const oldKey of LEGACY_STORAGE_KEYS) {
-      rawStored = localStorage.getItem(oldKey);
-      if (rawStored) break;
+  let rawStored = null;
+  try {
+    rawStored = localStorage.getItem(STORAGE_KEY_KAU);
+    if (!rawStored) {
+      for (const oldKey of LEGACY_STORAGE_KEYS) {
+        rawStored = localStorage.getItem(oldKey);
+        if (rawStored) break;
+      }
     }
+  } catch (storageError) {
+    console.warn('localStorage tidak tersedia; pemulihan dilanjutkan melalui IndexedDB:', storageError);
   }
   if (rawStored) {
     try { loaded = JSON.parse(rawStored); } catch (e) {}
@@ -1521,7 +1538,7 @@ async function initApp() {
     if (document.visibilityState === 'hidden') persistNow();
   });
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register(new URL('./sw.js', document.baseURI), { updateViaCache: 'none' }).then(reg => { if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' }); reg.update().catch(() => {}); }).catch(err => console.warn('Service worker gagal didaftarkan:', err));
   }
 }
 
@@ -2861,33 +2878,38 @@ async function triggerPrintPages(pagesHtml, paperSizeCss = '') {
     dynStyle.textContent = paperSizeCss ? `@media print { @page { size: ${paperSizeCss}; margin: 5mm; } }` : '';
   }
 
-  pa.innerHTML = pagesHtml;
+  pa.innerHTML = pagesHtml.replace(/<img\b/g, '<img decoding="sync" loading="eager"');
   pa.classList.add('is-printing');
 
   const imgs = Array.from(pa.querySelectorAll('img'));
-  await Promise.all(imgs.map(img => {
-    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-    if (typeof img.decode === 'function') {
-      return img.decode().catch(() => {});
-    }
-    return new Promise(res => {
-      img.onload = res;
-      img.onerror = res;
-    });
-  }));
+  await Promise.all(imgs.map(img => new Promise(resolve => {
+    if (img.complete) return resolve();
+    const done = () => { img.removeEventListener('load', done); img.removeEventListener('error', done); resolve(); };
+    img.addEventListener('load', done, { once: true });
+    img.addEventListener('error', done, { once: true });
+    // Data URL images should resolve immediately; this is a safety timeout for browser print engines.
+    setTimeout(done, 2500);
+  })));
+  if (imgs.some(img => !img.complete || img.naturalWidth === 0)) {
+    console.warn('Sebagian gambar cetak belum berhasil dimuat.');
+  }
+  await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 80))));
 
-  await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
-
-  const onAfterPrint = () => {
-    window.removeEventListener('afterprint', onAfterPrint);
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    window.removeEventListener('afterprint', cleanup);
+    if (printCleanupTimer) clearTimeout(printCleanupTimer);
     printCleanupTimer = setTimeout(() => {
       pa.classList.remove('is-printing');
       pa.innerHTML = '';
       if (dynStyle) dynStyle.textContent = '';
-    }, 1500);
+    }, 1200);
   };
-  window.addEventListener('afterprint', onAfterPrint);
-
+  window.addEventListener('afterprint', cleanup, { once: true });
+  // Some Android WebViews do not dispatch afterprint consistently.
+  printCleanupTimer = setTimeout(cleanup, 60000);
   window.print();
 }
 
@@ -3025,6 +3047,8 @@ async function onCameraZoomChange(val) {
 
 async function startCamera() {
   try {
+    if (!window.isSecureContext) throw new Error('Kamera memerlukan HTTPS atau localhost. Buka aplikasi melalui alamat HTTPS.');
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') throw new Error('Browser ini tidak menyediakan akses kamera. Gunakan tombol Pilih Foto LJK.');
     if (cameraStream) {
       stopCamera();
     }
@@ -3083,7 +3107,12 @@ async function startCamera() {
     document.getElementById('videoBox').style.display = 'flex';
     startLiveScannerLoop();
   } catch (err) {
-    alert('Tidak dapat membuka kamera langsung (' + err.message + '). Gunakan tombol "Pilih Foto LJK" untuk mengambil gambar dari galeri atau file.');
+    if (cameraStream) { cameraStream.getTracks().forEach(track => track.stop()); cameraStream = null; }
+    const video = document.getElementById('cameraVideo');
+    if (video) video.srcObject = null;
+    const box = document.getElementById('videoBox');
+    if (box) box.style.display = 'none';
+    alert('Tidak dapat membuka kamera langsung (' + (err && err.message ? err.message : 'kesalahan tidak diketahui') + '). Gunakan tombol Pilih Foto LJK untuk mengambil gambar dari galeri atau file.');
   }
 }
 
@@ -5581,7 +5610,7 @@ async function printAllReports() {
 // ==================== EKSPOR EXCEL (.XLSX) LENGKAP ====================
 function exportKAUExcel() {
   if (typeof XLSX === 'undefined') {
-    return alert('Pustaka Excel membutuhkan koneksi internet saat pertama kali dimuat.');
+    return alert('Modul Excel belum tersedia. Hubungkan perangkat ke internet, muat ulang aplikasi, lalu coba ekspor kembali.');
   }
   const wb = XLSX.utils.book_new();
   const res = computeAllAnalytics();
@@ -5662,6 +5691,16 @@ function exportKAUExcel() {
 
   XLSX.writeFile(wb, `KAU_${m.kelas.replace(/\W+/g, '_')}_${m.mapel}_${m.sekolah.replace(/\s+/g, '_')}.xlsx`);
 }
+
+// Status koneksi membantu pengguna memahami fitur yang memerlukan jaringan.
+window.addEventListener('online', () => {
+  const badge = document.getElementById('saveStatusBadge');
+  if (badge) badge.title = 'Perangkat terhubung ke internet';
+});
+window.addEventListener('offline', () => {
+  const badge = document.getElementById('saveStatusBadge');
+  if (badge) badge.title = 'Mode offline: data lokal tetap dapat digunakan; fitur CDN mungkin terbatas';
+});
 
 window.addEventListener('DOMContentLoaded', initApp);
 </script>
