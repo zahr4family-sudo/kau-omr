@@ -334,24 +334,33 @@
       white-space: nowrap;
     }
     .signature-block {
-      margin-top: 22px;
+      margin: 22px auto 0;
       padding-top: 10px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+      gap: clamp(12px, 4vw, 48px);
+      width: min(100%, 760px);
       font-size: 0.84rem;
       color: #0f172a;
       break-inside: avoid;
       page-break-inside: avoid;
     }
     .signature-col {
-      text-align: left;
-      padding-left: 12%;
+      text-align: center;
+      padding: 0 4px;
       line-height: 1.45;
+      min-width: 0;
     }
     .signature-space {
-      height: 58px;
+      height: 62px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
+    .signature-image { display:block; width:auto; max-width:min(100%,150px); height:auto; max-height:58px; object-fit:contain; object-position:center; margin:2px auto 4px; }
+    .signature-upload-box { border:1px solid #cbd5e1; border-radius:9px; padding:10px; background:#f8fafc; }
+    .signature-preview-wrap { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:7px; }
+    .signature-preview { max-width:150px; max-height:58px; object-fit:contain; background:white; border:1px dashed #cbd5e1; padding:3px; }
 
     #printArea {
       display: none;
@@ -426,6 +435,12 @@
       #printArea .print-page.ljk-sheet.f4-sheet img {
         max-height: 316mm !important;
       }
+      /* Judul laporan kuning di bawah kop disembunyikan khusus pada printout. */
+      #printArea .print-page > h2 { display:none !important; }
+      #printArea .signature-block { width:100% !important; grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; gap:18mm !important; margin:12mm auto 0 !important; }
+      #printArea .signature-col { text-align:center !important; padding:0 2mm !important; }
+      #printArea .signature-space { height:18mm !important; display:flex !important; align-items:center !important; justify-content:center !important; }
+      #printArea .signature-image { max-width:42mm !important; max-height:16mm !important; margin:2px auto 4px !important; print-color-adjust:exact !important; -webkit-print-color-adjust:exact !important; }
       #printArea .table-wrap {
         max-height: none !important;
         overflow: visible !important;
@@ -554,6 +569,19 @@
           <div><label>Nilai KKTP / KKM</label><input type="number" id="inKktp" value="70" oninput="saveState()" onchange="saveState()" /></div>
           <div><label>Tempat TTD</label><input id="inTempat" value="Bandung" oninput="saveState()" onchange="saveState()" /></div>
         </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <div class="signature-upload-box">
+            <label for="inTtdKepsek">Tanda Tangan Kepala Sekolah (PNG, opsional)</label>
+            <input id="inTtdKepsek" type="file" accept="image/png,.png" onchange="handleSignatureUpload(event, 'ttdKepsek')" />
+            <div class="signature-preview-wrap"><img id="previewTtdKepsek" class="signature-preview" alt="Pratinjau tanda tangan Kepala Sekolah" hidden><button type="button" class="btn btn-outline btn-sm" onclick="clearSignatureImage('ttdKepsek')">Hapus tanda tangan</button></div>
+          </div>
+          <div class="signature-upload-box">
+            <label for="inTtdGuru">Tanda Tangan Guru (PNG, opsional)</label>
+            <input id="inTtdGuru" type="file" accept="image/png,.png" onchange="handleSignatureUpload(event, 'ttdGuru')" />
+            <div class="signature-preview-wrap"><img id="previewTtdGuru" class="signature-preview" alt="Pratinjau tanda tangan Guru" hidden><button type="button" class="btn btn-outline btn-sm" onclick="clearSignatureImage('ttdGuru')">Hapus tanda tangan</button></div>
+          </div>
+        </div>
+        <small style="color:var(--muted);">Gambar tanda tangan disimpan pada data sesi ini dan akan ikut tampil pada laporan cetak. Gunakan PNG transparan agar hasil lebih rapi.</small>
       </div>
 
       <div class="card">
@@ -947,7 +975,8 @@ function getDefaultSession(id = 'ses_default_1') {
       guru: 'Apipudin, S.Pd.I', nipGuru: '19000000 000000 0 021', mapel: 'PAI',
       jenisTes: 'PENILAIAN SUMATIF AKHIR SEMESTER', materi: 'BAB I - BAB V',
       kelas: 'I (Satu)/ Ganjil', tapel: '2025 - 2026', tglTes: '29 September 2025',
-      tglPeriksa: '30 September 2025', kktp: 70, tempat: 'Bandung'
+      tglPeriksa: '30 September 2025', kktp: 70, tempat: 'Bandung',
+      ttdKepsek: '', ttdGuru: ''
     },
     config: {
       paperMode: 'auto_f4',
@@ -1633,6 +1662,7 @@ function syncInputsFromState() {
   updateIdLabelsUI();
   document.querySelectorAll('.lblJmlPG').forEach(el => el.textContent = state.config.jmlPG);
   document.getElementById('hdrSubtitle').textContent = `Koreksi & Analisis Ulangan • ${m.sekolah} • ${m.mapel} (${m.kelas})`;
+  updateSignaturePreviews();
 }
 
 function saveState(skipTableRerender = false) {
@@ -1650,7 +1680,9 @@ function saveState(skipTableRerender = false) {
     tglTes: document.getElementById('inTglTes').value,
     tglPeriksa: document.getElementById('inTglPeriksa').value,
     kktp: parseFloat(document.getElementById('inKktp').value) || 70,
-    tempat: document.getElementById('inTempat').value
+    tempat: document.getElementById('inTempat').value,
+    ttdKepsek: state.meta.ttdKepsek || '',
+    ttdGuru: state.meta.ttdGuru || ''
   };
   state.config.bubbleShape = document.getElementById('inBubbleShape').value === 'square' ? 'square' : 'circle';
   state.config.idFieldType = document.getElementById('inIdFieldType').value === 'nisn' ? 'nisn' : 'nomor_peserta';
@@ -2868,7 +2900,9 @@ let printCleanupTimer = null;
 async function triggerPrintPages(pagesHtml, paperSizeCss = '') {
   const pa = document.getElementById('printArea');
   const dynStyle = document.getElementById('dynamicPrintPageStyle');
-  if (!pa) return;
+  if (!pa) throw new Error('Area cetak (#printArea) tidak ditemukan. Muat ulang aplikasi.');
+  if (!pagesHtml || !String(pagesHtml).trim()) throw new Error('Tidak ada konten laporan untuk dicetak.');
+  if (typeof window.print !== 'function') throw new Error('Fitur cetak tidak didukung oleh browser/WebView ini. Buka aplikasi melalui Chrome.');
   if (printCleanupTimer) {
     clearTimeout(printCleanupTimer);
     printCleanupTimer = null;
@@ -2910,7 +2944,13 @@ async function triggerPrintPages(pagesHtml, paperSizeCss = '') {
   window.addEventListener('afterprint', cleanup, { once: true });
   // Some Android WebViews do not dispatch afterprint consistently.
   printCleanupTimer = setTimeout(cleanup, 60000);
-  window.print();
+  try {
+    window.focus();
+    window.print();
+  } catch (err) {
+    cleanup();
+    throw new Error('Browser gagal membuka dialog cetak: ' + (err?.message || err));
+  }
 }
 
 async function printLJK() {
@@ -3396,10 +3436,10 @@ function renderManualCornerEditorCanvas() {
       currentDetectedCorners = { tl: autoC.tl, tr: autoC.tr, br: autoC.br, bl: autoC.bl };
     } else {
       currentDetectedCorners = {
-        tl: { x: W * 0.08, y: H * 0.06 },
-        tr: { x: W * 0.92, y: H * 0.06 },
-        br: { x: W * 0.92, y: H * 0.65 },
-        bl: { x: W * 0.08, y: H * 0.65 }
+        tl: { x: W * 0.04, y: H * 0.04 },
+        tr: { x: W * 0.96, y: H * 0.04 },
+        br: { x: W * 0.96, y: H * 0.96 },
+        bl: { x: W * 0.04, y: H * 0.96 }
       };
     }
   }
@@ -4068,6 +4108,14 @@ function reprocessOMR() {
     refineAnchorCornersFullRes(srcCtx, srcW, srcH, corners);
   }
 
+  if (!corners.found) {
+    // Jangan pernah memaksa perspektif dari koordinat tebakan: ini penyebab foto
+    // yang bagus justru terpotong/ter-zoom saat empat penanda tidak terdeteksi.
+    currentDetectedCorners = null;
+    showOriginalPhotoForManualCrop();
+    return;
+  }
+
   currentDetectedCorners = {
     tl: { ...corners.tl },
     tr: { ...corners.tr },
@@ -4076,6 +4124,24 @@ function reprocessOMR() {
   };
 
   processRectifiedOMRFromSource(corners, useCompact);
+}
+
+function showOriginalPhotoForManualCrop() {
+  if (!loadedScanImage) return;
+  const canvas = document.getElementById('omrCanvas');
+  const ctx = canvas.getContext('2d');
+  const maxDim = 1200;
+  const scale = Math.min(1, maxDim / Math.max(loadedScanImage.width, loadedScanImage.height));
+  canvas.width = Math.max(1, Math.round(loadedScanImage.width * scale));
+  canvas.height = Math.max(1, Math.round(loadedScanImage.height * scale));
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(loadedScanImage, 0, 0, canvas.width, canvas.height);
+  const summary = document.getElementById('scanResultSummary');
+  if (summary) summary.innerHTML = '<b style="color:#b45309">Empat kotak penanda belum terdeteksi dengan yakin.</b> Foto asli ditampilkan utuh agar tidak salah potong. Tekan <b>Atur 4 Sudut Manual</b>, letakkan titik pada empat kotak hitam LJK, lalu Terapkan & Baca LJK.';
+  const editor = document.getElementById('scanAnswersEditor');
+  if (editor) editor.innerHTML = '';
+  const uraian = document.getElementById('scanUraianInputs');
+  if (uraian) uraian.innerHTML = '';
 }
 
 function processRectifiedOMRFromSource(corners, useCompact = false) {
@@ -4792,6 +4858,47 @@ const CHART_3D_COLORS = {
   }
 };
 
+function signatureImageMarkup(dataUrl, altText) {
+  if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) return '';
+  return `<img class="signature-image" src="${dataUrl}" alt="${escapeAttr(altText)}">`;
+}
+
+function updateSignaturePreviews() {
+  [['ttdKepsek','previewTtdKepsek'],['ttdGuru','previewTtdGuru']].forEach(([key,id]) => {
+    const img = document.getElementById(id);
+    if (!img) return;
+    const src = state?.meta?.[key] || '';
+    if (src) { img.src = src; img.hidden = false; }
+    else { img.removeAttribute('src'); img.hidden = true; }
+  });
+}
+
+function handleSignatureUpload(event, key) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  if (file.type !== 'image/png' && !/\.png$/i.test(file.name)) {
+    alert('Mohon pilih file gambar berformat PNG.'); event.target.value = ''; return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Ukuran gambar tanda tangan maksimal 2 MB.'); event.target.value = ''; return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.meta[key] = String(reader.result || '');
+    persistNow(); updateSignaturePreviews(); renderReport();
+  };
+  reader.onerror = () => alert('Gambar tanda tangan gagal dibaca. Silakan pilih ulang.');
+  reader.readAsDataURL(file);
+}
+
+function clearSignatureImage(key) {
+  if (!state?.meta) return;
+  state.meta[key] = '';
+  const input = document.getElementById(key === 'ttdKepsek' ? 'inTtdKepsek' : 'inTtdGuru');
+  if (input) input.value = '';
+  persistNow(); updateSignaturePreviews(); renderReport();
+}
+
 function renderChartCardWithLegend(title, svgInner, categories, total) {
   const legendRows = categories.map(c => {
     const pct = total > 0 ? Math.round((c.val / total) * 100) : 0;
@@ -5140,14 +5247,14 @@ function buildQualityChartSuiteHTML(items, chartStyle, sectionTitle, centerSubLa
       <div class="signature-col">
         <div>Mengetahui,</div>
         <div>Kepala Sekolah</div>
-        <div class="signature-space"></div>
+        <div class="signature-space">${signatureImageMarkup(m.ttdKepsek, 'Tanda tangan Kepala Sekolah')}</div>
         <div><b><u>${escapeAttr(m.kepsek)}</u></b></div>
         <div>NIP. ${escapeAttr(m.nipKepsek)}</div>
       </div>
       <div class="signature-col">
         <div>${escapeAttr(m.tempat)}, ${escapeAttr(m.tglPeriksa)}</div>
         <div>Guru Mata Pelajaran</div>
-        <div class="signature-space"></div>
+        <div class="signature-space">${signatureImageMarkup(m.ttdGuru, 'Tanda tangan Guru')}</div>
         <div><b><u>${escapeAttr(m.guru)}</u></b></div>
         <div>NIP. ${escapeAttr(m.nipGuru)}</div>
       </div>
@@ -5186,9 +5293,9 @@ function buildReportHTML(repId) {
     </div>
   `;
   const ttdFooter = `
-    <div style="display:flex; justify-content:space-between; margin-top:16px; font-size:0.78rem; break-inside:avoid;">
-      <div>Mengetahui,<br>Kepala Sekolah<br><br><br><b>${m.kepsek}</b><br>NIP. ${m.nipKepsek}</div>
-      <div>${m.tempat}, ${m.tglPeriksa}<br>Guru Mata Pelajaran<br><br><br><b>${m.guru}</b><br>NIP. ${m.nipGuru}</div>
+    <div class="signature-block" style="font-size:0.78rem;">
+      <div class="signature-col">Mengetahui,<br>Kepala Sekolah<div class="signature-space">${signatureImageMarkup(m.ttdKepsek, 'Tanda tangan Kepala Sekolah')}</div><b>${escapeAttr(m.kepsek)}</b><br>NIP. ${escapeAttr(m.nipKepsek)}</div>
+      <div class="signature-col">${escapeAttr(m.tempat)}, ${escapeAttr(m.tglPeriksa)}<br>Guru Mata Pelajaran<div class="signature-space">${signatureImageMarkup(m.ttdGuru, 'Tanda tangan Guru')}</div><b>${escapeAttr(m.guru)}</b><br>NIP. ${escapeAttr(m.nipGuru)}</div>
     </div>
   `;
 
@@ -5460,7 +5567,11 @@ function buildReportHTML(repId) {
 
   if (repId === 'leger_mapel') {
     const curKelas = (state.meta.kelas || '').trim();
-    const classSessions = workspace.sessions.filter(s => (s.meta.kelas || '').trim() === curKelas);
+    const classSessions = workspace.sessions.filter(s =>
+      (s.meta.kelas || '').trim() === curKelas &&
+      (s.meta.tapel || '').trim() === (state.meta.tapel || '').trim()
+    );
+    if (!classSessions.length) return `${headerKop}<div class="empty-state">Belum ada sesi mata pelajaran untuk kelas dan tahun pelajaran ini. Buat atau impor sesi mapel lain pada kelas yang sama, lalu buka kembali Leger Mapel.</div>`;
     const analyticsMap = classSessions.map(s => ({
       ses: s,
       ana: computeAllAnalyticsForSession(s)
@@ -5478,7 +5589,7 @@ function buildReportHTML(repId) {
           });
         }
         const entry = rosterMap.get(key);
-        entry.scores[sIdx] = analyticsMap[sIdx].gabungan[stIdx]?.nAkhir ?? null;
+        entry.scores[sIdx] = analyticsMap[sIdx].ana.gabungan[stIdx]?.nAkhir ?? null;
       });
     });
 
@@ -5594,17 +5705,57 @@ function renderReport() {
 }
 
 async function printCurrentReport() {
-  const html = `<section class="print-page">${buildReportHTML(currentReportTab)}</section>`;
-  await triggerPrintPages(html, 'A4 portrait');
+  try {
+    if (!Array.isArray(state.students) || state.students.length === 0) {
+      alert('Belum ada data siswa. Impor atau tambahkan data siswa terlebih dahulu sebelum mencetak laporan.');
+      return;
+    }
+    const reportHtml = buildReportHTML(currentReportTab);
+    if (!reportHtml || !reportHtml.trim()) throw new Error('Isi laporan yang dipilih kosong.');
+    await triggerPrintPages(`<section class="print-page">${reportHtml}</section>`, 'A4 portrait');
+  } catch (err) {
+    console.error('Gagal mencetak laporan aktif:', err);
+    alert('Laporan gagal disiapkan untuk dicetak. Periksa data siswa dan konfigurasi soal, lalu coba kembali. Detail: ' + (err?.message || err));
+  }
 }
 
 async function printAllReports() {
-  const tabs = ['nilai_mc', 'analisis_mc', 'grafik_mc'];
-  if ((state.config.jmlBS || 0) > 0) tabs.push('grafik_bs');
-  if ((state.config.jmlUR || 0) > 0) tabs.push('grafik_ur', 'nilai_ur', 'analisis_ur');
-  tabs.push('nil_gab', 'perbaikan', 'leger_mapel', 'rekap_kelas');
-  const pagesHtml = tabs.map(t => `<section class="print-page">${buildReportHTML(t)}</section>`).join('');
-  await triggerPrintPages(pagesHtml, 'A4 portrait');
+  try {
+    if (!Array.isArray(state.students) || state.students.length === 0) {
+      alert('Belum ada data siswa. Impor atau tambahkan data siswa terlebih dahulu sebelum mencetak semua laporan.');
+      return;
+    }
+
+    // Daftar mengikuti seluruh tab laporan. Bagian B-S dan uraian hanya dicetak
+    // jika jenis soal tersebut memang digunakan pada sesi aktif.
+    const tabs = ['nilai_mc', 'analisis_mc', 'grafik_mc'];
+    if (Number(state.config.jmlBS) > 0) tabs.push('grafik_bs');
+    if (Number(state.config.jmlUR) > 0) tabs.push('grafik_ur', 'nilai_ur', 'analisis_ur');
+    tabs.push('nil_gab', 'remed', 'perbaikan', 'leger_mapel', 'rekap_kelas');
+
+    const pages = [];
+    const failed = [];
+    for (const tabId of tabs) {
+      try {
+        const html = buildReportHTML(tabId);
+        if (html && html.trim()) pages.push(`<section class="print-page">${html}</section>`);
+        else failed.push(tabId + ' (konten kosong)');
+      } catch (err) {
+        console.error('Gagal membangun laporan ' + tabId + ':', err);
+        failed.push(tabId + ' (' + (err?.message || 'kesalahan data') + ')');
+      }
+    }
+
+    if (!pages.length) throw new Error('Tidak ada bagian laporan yang berhasil dibuat.');
+    if (failed.length) console.warn('Bagian laporan yang dilewati:', failed);
+    await triggerPrintPages(pages.join(''), 'A4 portrait');
+    if (failed.length) {
+      setTimeout(() => alert('Paket laporan tetap dicetak, tetapi beberapa bagian dilewati karena data tidak lengkap: \n- ' + failed.join('\n- ')), 500);
+    }
+  } catch (err) {
+    console.error('Gagal mencetak paket semua laporan:', err);
+    alert('Paket laporan tidak dapat dicetak. ' + (err?.message || err));
+  }
 }
 
 // ==================== EKSPOR EXCEL (.XLSX) LENGKAP ====================
