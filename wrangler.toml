@@ -1,0 +1,11 @@
+name = "kau"
+main = "worker.js"
+compatibility_date = "2026-11-25"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kau-access"
+database_id = "ISI_DATABASE_ID_DARI_CLOUDFLARE"
+
+[vars]
+ALLOWED_ORIGINS = "https://zahr4family-sudo.github.io"
